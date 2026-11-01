@@ -11,11 +11,15 @@
 #include "app/Boot.h"
 #include "app/MultiReceiver.h"
 #include "board_pins.h"
+#ifdef IRIS_BATTERY_RATIO_PERMILLE
+#include "infrastructure/esp32/AdcBatteryMonitor.h"
+#endif
 #include "infrastructure/esp32/ArduinoClock.h"
 #include "infrastructure/esp32/GpioButtons.h"
 #include "infrastructure/esp32/IrReceiverAdapter.h"
 #include "infrastructure/esp32/IrTransmitterAdapter.h"
 #include "infrastructure/esp32/PersistentStore.h"
+#include "infrastructure/esp32/SdFileSource.h"
 #include "infrastructure/esp32/U8g2Display.h"
 #include "infrastructure/esp32/UnavailableIr.h"
 #include "ui/AppScreens.h"
@@ -44,7 +48,12 @@ struct Device {
   PersistentStore store;
   GpioButtons buttons;
   U8g2Display display;
+  SdFileSource sd;
+#ifdef IRIS_BATTERY_RATIO_PERMILLE
+  AdcBatteryMonitor battery;  // divider on GPIO33 (docs/wiring.md 4.6)
+#else
   NoBatteryMonitor battery;
+#endif
   IrReceiverAdapter receiver1{board::kIrRx1, 0, clock};
 #ifdef IRIS_ENABLE_RX2
   IrReceiverAdapter receiver2{board::kIrRx2, 1, clock};  // second TSOP, off unless wired and enabled
@@ -69,6 +78,7 @@ struct Device {
       : ctx(library, repo, settingsStore, settings, learn, transmit, explore, receivers, buttons, battery, log, clock,
             store, info),
         ui(ctx, display, iris::makeHomeScreen()) {
+    ctx.files = &sd;
     receivers.add(receiver1);
 #ifdef IRIS_ENABLE_RX2
     receivers.add(receiver2);
@@ -92,6 +102,9 @@ void setup() {
   Device& d = *device;
 
   d.buttons.begin();
+#ifdef IRIS_BATTERY_RATIO_PERMILLE
+  d.battery.begin();
+#endif
   char line[48];
   d.info.firmware = "0.6-dev";
   d.info.displayController = kIrisPanelName;

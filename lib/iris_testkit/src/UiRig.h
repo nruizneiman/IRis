@@ -9,6 +9,7 @@
 #include "FakeButtons.h"
 #include "FakeClock.h"
 #include "FakeDisplay.h"
+#include "FakeFileSource.h"
 #include "FakeIrReceiver.h"
 #include "FakeIrTransmitter.h"
 #include "MemoryBlobStore.h"
@@ -26,6 +27,7 @@ struct UiRig {
   FakeDisplay display;
   FakeButtons buttons;
   FakeBattery battery;
+  FakeFileSource card;
   RingLogSink log{clock, 200};
 
   LibraryRepository repo{flash};
@@ -44,6 +46,7 @@ struct UiRig {
       : ctx(library, repo, settingsStore, settings, learn, transmit, explore, rx, buttons, battery, log, clock, flash,
             info),
         ui(ctx, display, makeHomeScreen()) {
+    ctx.files = &card;
     info.firmware = "sim";
     info.displayController = "FakeDisplay";
     info.irLibrary = "simulado";

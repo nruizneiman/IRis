@@ -18,7 +18,7 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   UiRig r;
   CHECK(r.topId() == std::string("home"));
   // Icon grid: one 16x16 icon per entry, a frame on the selected one, only its name as text, battery in the title bar.
-  CHECK(r.display.shownBitmaps() == 5);
+  CHECK(r.display.shownBitmaps() == 6);
   CHECK(r.display.shownShapes() == 2);  // title bar + selection frame
   CHECK(isSelected(r.screen(), "Controles"));
   CHECK_FALSE(r.shows("Aprender señal"));
@@ -27,12 +27,12 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   CHECK(isSelected(r.screen(), "Aprender señal"));
   r.press(Key::Left);
   CHECK(isSelected(r.screen(), "Controles"));
-  r.press(Key::Left);         // wraps to the last of the five
-  CHECK(isSelected(r.screen(), "Configuración"));
+  r.press(Key::Left);         // wraps to the last of the six
+  CHECK(isSelected(r.screen(), "Importar"));
   r.press(Key::Right);
-  r.press(Key::Up);           // a whole row back: 0 -> 2 (wrapping over five entries)
-  CHECK(isSelected(r.screen(), "Crear control"));
-  r.press(Key::Down);
+  r.press(Key::Down);         // a whole row down: 0 -> 3
+  CHECK(isSelected(r.screen(), "Herramientas IR"));
+  r.press(Key::Up);
   CHECK(isSelected(r.screen(), "Controles"));
   r.press(Key::Left);
   r.press(Key::Right);        // nothing below home: it stays on the home screen

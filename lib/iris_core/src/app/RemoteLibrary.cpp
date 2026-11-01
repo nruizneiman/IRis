@@ -175,6 +175,23 @@ Result<Id> RemoteLibrary::addRemote(const std::string& rawName, Id categoryId) {
   return id;
 }
 
+Result<Id> RemoteLibrary::importRemote(const std::string& name, Id categoryId,
+                                       const std::vector<std::pair<std::string, IrSignal>>& buttons) {
+  const bool wasDirty = dirty_;
+  Result<Id> remote = addRemote(name, categoryId);
+  if (!remote.ok()) return remote;
+  for (const auto& b : buttons) {
+    Result<Id> id = addButton(remote.value(), b.first);
+    Status st = id.ok() ? setButtonSignal(remote.value(), id.value(), b.second) : id.status();
+    if (!st.ok()) {
+      removeRemote(remote.value());
+      dirty_ = wasDirty;  // nothing visible changed (an id was consumed, which is harmless)
+      return st;
+    }
+  }
+  return remote;
+}
+
 Status RemoteLibrary::renameRemote(Id id, const std::string& rawName) {
   Remote* r = findRemoteMut(id);
   if (!r) return Status::fail(Err::NotFound, "remote not found");

@@ -18,6 +18,7 @@
 #include "hardware/IBatteryMonitor.h"
 #include "hardware/IBlobStore.h"
 #include "hardware/IButtonInput.h"
+#include "hardware/IFileSource.h"
 #include "hardware/IDisplay.h"
 #include "hardware/IIrReceiver.h"
 #include "persistence/LibraryRepository.h"
@@ -90,6 +91,7 @@ struct UiContext {
   IBlobStore& store;
   const DeviceInfo& info;
 
+  IFileSource* files = nullptr;  // removable card with Flipper-IRDB files; null when the build has no card support
   bool displayHealthy = true;
   // False when the stored data could not be read for a reason other than damage (read error, low memory,
   // newer firmware): saving would overwrite data we never saw. The UI keeps working in memory only.

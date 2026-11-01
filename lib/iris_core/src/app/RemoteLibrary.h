@@ -2,6 +2,8 @@
 #pragma once
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "Result.h"
 #include "domain/Library.h"
@@ -29,6 +31,10 @@ class RemoteLibrary {
   Status removeRemote(Id id);
   // Copies a remote with all its buttons and signals under a new name (same category). Counts against every limit.
   Result<Id> duplicateRemote(Id sourceId, const std::string& newName);
+
+  // Creates a remote with all its buttons and signals, or nothing: a failure part-way removes what was added.
+  Result<Id> importRemote(const std::string& name, Id categoryId,
+                          const std::vector<std::pair<std::string, IrSignal>>& buttons);
 
   Result<Id> addButton(Id remoteId, const std::string& name);
   Status renameButton(Id remoteId, Id buttonId, const std::string& name);

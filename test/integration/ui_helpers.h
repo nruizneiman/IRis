@@ -31,7 +31,8 @@ inline bool isSelected(const std::string& screen, const std::string& label) {
 inline bool select(UiRig& r, const std::string& label) {
   for (int i = 0; i < 40; ++i) {
     if (isSelected(r.screen(), label)) return true;
-    r.press(Key::Down);
+    // On the icon grid Down jumps a whole row (it would only alternate between two icons): walk with Right there.
+    r.press(r.topId() == std::string("home") ? Key::Right : Key::Down);
   }
   return false;
 }

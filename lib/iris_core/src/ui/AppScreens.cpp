@@ -1,12 +1,15 @@
 #include "ui/AppScreens.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
+#include <memory>
 
 #include "app/SignalBuilder.h"
 #include "domain/Limits.h"
 #include "domain/Naming.h"
 #include "domain/SignalValidation.h"
+#include "import/FlipperIr.h"
 #include "ui/Icons.h"
 #include "ui/Utf8.h"
 #include "ui/Widgets.h"
@@ -1032,6 +1035,191 @@ P makeSettingsScreen() {
   });
 }
 
+// ---------------------------------------------------------------- import from the SD card (Flipper-IRDB)
+
+constexpr size_t kImportListMax = 300;          // entries shown per folder
+constexpr size_t kImportMaxFileBytes = 65536;   // the same limit the upload tool enforces
+constexpr const char* kImportRoot = "/irdb";
+
+bool endsWithIr(const std::string& n) { return n.size() > 3 && n.compare(n.size() - 3, 3, ".ir") == 0; }
+
+std::string remoteNameFromFile(const std::string& file) {
+  std::string n = file;
+  if (endsWithIr(n)) n.resize(n.size() - 3);
+  for (char& ch : n) {
+    if (ch == '_') ch = ' ';
+  }
+  return trimName(utf8Truncate(n, limits::kMaxNameBytes));
+}
+
+// `base`, or `base 2`, `base 3`... when `taken` already holds it (always within the name length limit).
+std::string uniqueName(const std::vector<std::string>& taken, const std::string& base) {
+  auto isTaken = [&](const std::string& n) {
+    for (const std::string& t : taken) {
+      if (namesEqual(t, n)) return true;
+    }
+    return false;
+  };
+  if (!isTaken(base)) return base;
+  for (int i = 2; i < 100; ++i) {
+    const std::string suffix = " " + std::to_string(i);
+    std::string head = base;
+    if (head.size() + suffix.size() > limits::kMaxNameBytes) head = utf8Truncate(head, limits::kMaxNameBytes - suffix.size());
+    const std::string candidate = trimName(head) + suffix;
+    if (!isTaken(candidate)) return candidate;
+  }
+  return base;
+}
+
+struct ImportState {
+  std::string path, file;
+  bool parsed = false;
+  Status status;
+  ImportedRemote imp;
+};
+
+void parseOnce(UiContext& c, ImportState& st) {
+  if (st.parsed) return;
+  st.parsed = true;
+  if (!c.files || !c.files->available()) {
+    st.status = Status::fail(Err::Unavailable, "no card");
+    return;
+  }
+  auto text = c.files->readText(st.path, kImportMaxFileBytes);
+  if (!text.ok()) {
+    st.status = text.status();
+    return;
+  }
+  auto parsed = parseFlipperIr(text.value());
+  if (!parsed.ok()) {
+    st.status = parsed.status();
+    return;
+  }
+  st.imp = std::move(parsed.value());
+}
+
+// Creates the remote from the parsed file in `cat`. Names are made unique; on failure nothing is left behind.
+Nav doImport(UiContext& c, const std::shared_ptr<ImportState>& st, Id cat, bool removeCategoryOnFailure) {
+  std::vector<std::string> names;
+  std::vector<std::pair<std::string, IrSignal>> buttons;
+  for (const ImportedButton& b : st->imp.buttons) {
+    const std::string n = uniqueName(names, b.name);
+    names.push_back(n);
+    buttons.emplace_back(n, b.signal);
+  }
+  std::vector<std::string> remoteNames;
+  for (const Remote& r : c.library.data().remotes) remoteNames.push_back(r.name);
+  const std::string name = uniqueName(remoteNames, remoteNameFromFile(st->file));
+  auto r = c.library.importRemote(name, cat, buttons);
+  if (!r.ok() && removeCategoryOnFailure) c.library.removeCategory(cat);
+  if (!finishChange(c, r.ok() ? Status::success() : r.status(), "Control importado")) return Nav::none();
+  return Nav::homeThen(makeRemoteScreen(r.value()));
+}
+
+P makeImportCategoryPicker(std::shared_ptr<ImportState> st) {
+  auto list = std::make_unique<ListScreen>("import-category", "Guardar en...", [st](UiContext& c) {
+    std::vector<ListItem> it;
+    for (const Category& cat : c.library.data().categories) {
+      const Id cid = cat.id;
+      it.push_back({cat.name, "", [st, cid](UiContext& c2) { return doImport(c2, st, cid, false); }});
+    }
+    it.push_back({"+ Nueva categoría", "", [st](UiContext&) {
+                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
+                        "Nueva categoría", "", limits::kMaxNameBytes, [st](UiContext& c2, const std::string& catName) {
+                          auto cat = c2.library.addCategory(catName);
+                          if (!cat.ok()) {
+                            c2.toast(spanishError(cat.status()));
+                            return Nav::none();
+                          }
+                          return doImport(c2, st, cat.value(), true);
+                        }), categoryPresets()));
+                  }});
+    return it;
+  });
+  return list;
+}
+
+P makeImportPreview(const std::string& dir, const std::string& file) {
+  auto st = std::make_shared<ImportState>();
+  st->path = dir + "/" + file;
+  st->file = file;
+  auto info = std::make_unique<InfoScreen>("import-preview", "Importar", [st](UiContext& c) {
+    parseOnce(c, *st);
+    std::vector<std::string> lines;
+    lines.push_back(remoteNameFromFile(st->file));
+    if (!st->status.ok()) {
+      lines.push_back(st->status.code == Err::Unavailable          ? "Sin tarjeta SD"
+                      : st->status.code == Err::OutOfRange         ? "Archivo demasiado grande"
+                      : st->status.code == Err::UnsupportedVersion ? "Versión no soportada"
+                      : st->status.code == Err::Corrupt            ? "No es un archivo IRDB"
+                                                                   : "No se pudo leer");
+      return lines;
+    }
+    const ImportReport& rep = st->imp.report;
+    lines.push_back("Botones: " + numStr(rep.imported));
+    if (rep.unsupported) lines.push_back("Sin soporte: " + numStr(rep.unsupported));
+    if (rep.invalid) lines.push_back("Inválidos: " + numStr(rep.invalid));
+    if (rep.overCapacity) lines.push_back("Sin lugar: " + numStr(rep.overCapacity));
+    if (!rep.firstProblem.empty()) lines.push_back(rep.firstProblem);
+    return lines;
+  });
+  info->okAction("OK:importar Izq:atrás", [st](UiContext& c) {
+    parseOnce(c, *st);
+    if (!st->status.ok() || st->imp.buttons.empty()) {
+      c.toast("Nada para importar");
+      return Nav::none();
+    }
+    return Nav::push(makeImportCategoryPicker(st));
+  });
+  return info;
+}
+
+P makeImportBrowser(const std::string& dir) {
+  auto list = std::make_unique<ListScreen>("import-browser", "Importar IRDB", [dir](UiContext& c) {
+    std::vector<ListItem> it;
+    if (!c.files || !c.files->available()) {
+      it.push_back({"Sin tarjeta SD", "", nullptr});
+      return it;
+    }
+    auto r = c.files->list(dir, kImportListMax + 1);
+    if (!r.ok()) {
+      it.push_back({dir == kImportRoot ? "Sin carpeta /irdb" : "No se pudo leer", "", nullptr});
+      return it;
+    }
+    std::vector<FileEntry> entries;
+    for (FileEntry& e : r.value()) {
+      if (e.name.empty() || e.name[0] == '.') continue;
+      if (e.isDir || endsWithIr(e.name)) entries.push_back(std::move(e));
+    }
+    const bool cut = entries.size() > kImportListMax;
+    if (cut) entries.resize(kImportListMax);
+    std::sort(entries.begin(), entries.end(), [](const FileEntry& a, const FileEntry& b) {
+      if (a.isDir != b.isDir) return a.isDir;  // folders first
+      std::string x = a.name, y = b.name;
+      for (char& ch : x) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+      for (char& ch : y) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+      return x < y;
+    });
+    for (const FileEntry& e : entries) {
+      const std::string name = e.name;
+      if (e.isDir) {
+        it.push_back({name + "/", "", [dir, name](UiContext&) { return Nav::push(makeImportBrowser(dir + "/" + name)); }});
+      } else {
+        it.push_back({name.substr(0, name.size() - 3), "", [dir, name](UiContext&) { return Nav::push(makeImportPreview(dir, name)); }});
+      }
+    }
+    if (cut) it.push_back({"(lista incompleta)", "", nullptr});
+    return it;
+  });
+  list->titleFn([dir](UiContext&) {
+    if (dir == kImportRoot) return std::string("Importar IRDB");
+    const size_t slash = dir.rfind('/');
+    return slash == std::string::npos ? dir : dir.substr(slash + 1);
+  });
+  list->emptyText("(carpeta vacía)");
+  return list;
+}
+
 // ---------------------------------------------------------------- home
 
 P buildHome() {
@@ -1042,6 +1230,13 @@ P buildHome() {
     it.push_back({"Crear control", icons::kCreate.data(), [](UiContext&) { return Nav::push(makeCreateRemote()); }});
     it.push_back({"Herramientas IR", icons::kTools.data(), [](UiContext&) { return Nav::push(makeToolsScreen()); }});
     it.push_back({"Configuración", icons::kSettings.data(), [](UiContext&) { return Nav::push(makeSettingsScreen()); }});
+    it.push_back({"Importar", icons::kImport.data(), [](UiContext& c) {
+                    if (!c.files || !c.files->available()) {
+                      c.toast("Sin tarjeta SD");
+                      return Nav::none();
+                    }
+                    return Nav::push(makeImportBrowser(kImportRoot));
+                  }});
     return it;
   });
   home->titleFn([](UiContext& c) {

@@ -215,9 +215,15 @@ battery(+) --[100 kΩ]--+--[100 kΩ]-- GND          GPIO33 --- middle point, wit
 ```
 
 Reads half the battery voltage (at most about 2.1 V at 4.2 V, inside the ADC range). It draws about 21 µA all the
-time. The ESP32 ADC is non-linear and needs calibration against a multimeter; the firmware does **not** use this
-pin yet, so the home screen keeps showing `Bat n/d`. Use the bench command `a` to read it. Do not connect the
-divider before the battery rail itself has been validated (B9).
+time. The ESP32 ADC is non-linear and needs calibration against a multimeter. The firmware reads this pin **only when
+built with `-DIRIS_BATTERY_RATIO_PERMILLE=<ratio x 1000>`** (2000 for two equal resistors; `AdcBatteryMonitor`, median of
+9 samples, `analogReadMilliVolts` factory calibration, *not verified on the board*). Without the flag the home screen
+keeps showing `Bat n/d`, because a floating pin would show noise. With it the title bar shows the voltage (`3.87 V`); no
+percentage is invented. Use the bench command `a` to compare the pin millivolts with a multimeter first.
+
+Only 1 kΩ and 10 kΩ parts are on the bench (no 100 kΩ): two 10 kΩ give the same ratio at 210 µA instead of 21 µA, about
+0.2 mA against the roughly 80 mA of the running board; take the divider from the **switched** side (after the power switch)
+so it never drains the cell while the device is off. Put 100 nF from the pin to GND if you have it.
 
 ### 4.7 Battery, charging and regulation
 
@@ -274,7 +280,9 @@ switch, not a GPIO.
 
 ## 5. What not to do
 
-- Do not drive the LED from a GPIO, "just for a quick test".
+- Do not drive the LED from a GPIO. (Current state: the tester asked for exactly that as a **temporary bench measure**
+  on 2026-11-01 because only IRFZ44N parts were at hand, with 220 Ω to GND; see `docs/logs/2026-11-01-b8.md`. Fit a
+  proper driver, a logic-level MOSFET or an NPN, before treating the device as finished.)
 - Do not connect the LED branch to the battery before the current-limiting resistor and the gate pull-down exist.
 - Do not leave a transmission test running unattended; the bench commands are bounded on purpose.
 - Do not charge a cell while the device runs from the same TP4056 output (no power-path).
