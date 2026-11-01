@@ -37,6 +37,7 @@ class U8g2Display : public iris::IDisplay {
     if (!u8g2_.begin()) return iris::Status::fail(iris::Err::Unavailable, "display init failed");
     u8g2_.setFont(u8g2_font_5x8_tf);  // Latin-1 glyphs (accents, n-tilde, inverted ! and ?): verify on the panel
     u8g2_.setFontPosTop();
+    u8g2_.setFontMode(1);  // transparent glyphs: dark text over a lit bar only erases the glyph pixels
     u8g2_.clearBuffer();
     ready_ = true;
     return iris::Status::success();
@@ -45,7 +46,10 @@ class U8g2Display : public iris::IDisplay {
   int width() const override { return 128; }
   int height() const override { return 64; }
   void clear() override {
-    if (ready_) u8g2_.clearBuffer();
+    if (ready_) {
+      u8g2_.clearBuffer();
+      u8g2_.setDrawColor(1);  // the previous frame may have ended in dark-on-lit mode
+    }
   }
 
   // The UI places text on a 6x8 pixel grid; glyphs are drawn one by one so the 5 px wide font
@@ -78,6 +82,13 @@ class U8g2Display : public iris::IDisplay {
     if (!ready_) return;
     if (filled) u8g2_.drawBox(x, y, w, h);
     else u8g2_.drawFrame(x, y, w, h);
+  }
+  void drawBitmap(int x, int y, int w, int h, const uint8_t* xbm) override {
+    if (ready_ && xbm) u8g2_.drawXBM(static_cast<u8g2_uint_t>(x), static_cast<u8g2_uint_t>(y), static_cast<u8g2_uint_t>(w),
+                                     static_cast<u8g2_uint_t>(h), xbm);
+  }
+  void setDrawColor(bool lit) override {
+    if (ready_) u8g2_.setDrawColor(lit ? 1 : 0);
   }
   void setInverted(bool inverted) override {
     if (ready_ && inverted != inverted_) {

@@ -29,6 +29,14 @@ class Painter {
   // One list row: marker, label, optional right-aligned value.
   void item(int row, std::string_view label, std::string_view value, bool selected);
   void footer(std::string_view s);  // ignored while a toast owns the footer row
+  void footerCentered(std::string_view s);  // same, centred (the home grid shows the selected name here)
+  // Thin scroll indicator in the two right-most pixel columns of the content rows; drawn only when the list does not fit.
+  void scrollbar(size_t total, size_t first, size_t visible);
+  // A key of the on-screen keyboard at pixel position (x, y): `w` px wide, 8 px high, label centred; the selected one is
+  // drawn as a lit box with dark text.
+  void keyCap(int x, int y, int w, std::string_view label, bool selected);
+  void bitmap(int x, int y, int w, int h, const uint8_t* xbm);  // XBM, see IDisplay::drawBitmap
+  void frame(int x, int y, int w, int h);                       // 1 px outline
   // Draws a transient message on the footer row and keeps the screen from drawing over it.
   void toastFooter(std::string_view s);
   uint32_t hash() const { return hash_; }

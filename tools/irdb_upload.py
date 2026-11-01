@@ -2,6 +2,8 @@
 """Copy Flipper-IRDB `.ir` files to the SD card through the bench firmware (serial), with CRC32 checks.
 
 Usage:  python tools/irdb_upload.py COM5 <root folder> <file> [<file> ...]
+        python tools/irdb_upload.py COM5 <root folder> --list files.txt [--skip-existing]
+(--skip-existing leaves files alone that are already on the card with the same size and CRC32: use it to resume.)
 Each file is stored on the card as /irdb/<path relative to the root folder, with forward slashes>.
 Needs the `bench` firmware running (commands sdput / sdcrc). Does not reset the board.
 """
@@ -22,7 +24,8 @@ def read_until(ser, wanted, timeout):
     end = time.time() + timeout
     buf = b""
     while time.time() < end:
-        buf += ser.read(4096)
+        # read(n) blocks for the whole serial timeout unless n bytes arrive: take what is there, or one byte
+        buf += ser.read(ser.in_waiting or 1)
         while b"\n" in buf:
             line, buf = buf.split(b"\n", 1)
             text = line.decode("utf-8", "replace").strip()
@@ -30,6 +33,16 @@ def read_until(ser, wanted, timeout):
                 if text.startswith(w):
                     return w, text
     return None, buf.decode("utf-8", "replace")
+
+
+def already_there(ser, local, remote):
+    """True when the card already holds this exact file (same size and CRC32)."""
+    data = open(local, "rb").read()
+    ser.reset_input_buffer()
+    ser.write(("sdcrc %s\n" % remote).encode())
+    word, text = read_until(ser, ["CRC", "ERR"], 5)
+    m = re.search(r"size=(\d+) crc=([0-9A-Fa-f]{8})", text)
+    return word == "CRC" and bool(m) and int(m.group(1)) == len(data) and int(m.group(2), 16) == (zlib.crc32(data) & 0xFFFFFFFF)
 
 
 def upload(ser, local, remote):
@@ -60,10 +73,17 @@ def upload(ser, local, remote):
 
 
 def main():
-    if len(sys.argv) < 4:
+    argv = [a for a in sys.argv[1:] if a != "--skip-existing"]
+    skip_existing = "--skip-existing" in sys.argv[1:]
+    if len(argv) < 3:
         print(__doc__)
         return 2
-    port, root, files = sys.argv[1], os.path.abspath(sys.argv[2]), sys.argv[3:]
+    port, root, rest = argv[0], os.path.abspath(argv[1]), argv[2:]
+    if rest[0] == "--list":  # a text file with one path per line (too many files for the command line)
+        with open(rest[1], encoding="utf-8") as fh:
+            files = [ln.strip() for ln in fh if ln.strip()]
+    else:
+        files = rest
     ser = serial.Serial()
     ser.port, ser.baudrate, ser.timeout, ser.write_timeout = port, 115200, 2, 5
     ser.dtr = False
@@ -77,8 +97,13 @@ def main():
             print("SKIP (outside the root folder):", f)
             bad += 1
             continue
-        good, msg = upload(ser, path, "/irdb/" + rel)
-        print(("OK   " if good else "FAIL ") + rel + "  " + msg)
+        remote = "/irdb/" + rel
+        if skip_existing and already_there(ser, path, remote):
+            print("SAME " + rel, flush=True)
+            ok += 1
+            continue
+        good, msg = upload(ser, path, remote)
+        print(("OK   " if good else "FAIL ") + rel + "  " + msg, flush=True)
         ok += good
         bad += not good
     ser.close()

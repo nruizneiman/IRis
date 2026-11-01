@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
+#include "ui/Icons.h"
 #include "ui/Utf8.h"
 
 namespace iris {
@@ -59,8 +60,71 @@ void ListScreen::render(UiContext& c, Painter& p) {
       const ListItem& it = items_[top_ + i];
       p.item(Painter::kFirstContentRow + static_cast<int>(i), it.label, it.value, top_ + i == sel_);
     }
+    p.scrollbar(items_.size(), top_, Painter::kContentRows);
   }
   p.footer(footer_);
+}
+
+// ================= IconGridScreen =================
+
+namespace {
+constexpr int kGridCols = 3;
+constexpr int kGridMaxItems = 6;
+constexpr int kGridLeft = 4;       // the grid uses x = 4..123, the two right-most columns stay free
+constexpr int kGridCellW = 40;
+constexpr int kGridFirstY = 14;    // icon rows at y = 14 and y = 35 (16 px high, 3 px frame margin)
+constexpr int kGridRowStep = 21;
+}  // namespace
+
+IconGridScreen::IconGridScreen(std::string id, std::string title, Provider provider)
+    : id_(std::move(id)), title_(std::move(title)), provider_(std::move(provider)) {}
+
+void IconGridScreen::refresh(UiContext& c) {
+  items_ = provider_(c);
+  if (items_.size() > static_cast<size_t>(kGridMaxItems)) items_.resize(kGridMaxItems);
+  if (sel_ >= items_.size()) sel_ = items_.empty() ? 0 : items_.size() - 1;
+}
+
+Nav IconGridScreen::onKey(UiContext& c, const KeyEvent& e) {
+  const size_t n = items_.size();
+  if (n == 0) return Nav::none();
+  const bool move = e.action == KeyAction::Press || e.action == KeyAction::Repeat;
+  if (move && e.key == Key::Down) {
+    sel_ = (sel_ + kGridCols) % n;
+    return Nav::none();
+  }
+  if (move && e.key == Key::Up) {
+    sel_ = (sel_ + n - (static_cast<size_t>(kGridCols) % n)) % n;
+    return Nav::none();
+  }
+  if (isPress(e, Key::Right)) {
+    sel_ = (sel_ + 1) % n;
+    return Nav::none();
+  }
+  if (isPress(e, Key::Left)) {
+    sel_ = (sel_ + n - 1) % n;
+    return Nav::none();
+  }
+  if (isPress(e, Key::Ok)) {
+    const auto fn = items_[sel_].onSelect;
+    if (!fn) return Nav::none();
+    Nav nav = fn(c);
+    if (nav.kind == Nav::Kind::None) refresh(c);
+    return nav;
+  }
+  return Nav::none();
+}
+
+void IconGridScreen::render(UiContext& c, Painter& p) {
+  p.title(titleFn_ ? titleFn_(c) : title_);
+  for (size_t i = 0; i < items_.size(); ++i) {
+    const int col = static_cast<int>(i) % kGridCols, row = static_cast<int>(i) / kGridCols;
+    const int x = kGridLeft + col * kGridCellW + (kGridCellW - icons::kSize) / 2;
+    const int y = kGridFirstY + row * kGridRowStep;
+    if (items_[i].icon) p.bitmap(x, y, icons::kSize, icons::kSize, items_[i].icon);
+    if (i == sel_) p.frame(x - 3, y - 3, icons::kSize + 6, icons::kSize + 6);
+  }
+  if (!items_.empty()) p.footerCentered(items_[sel_].label);
 }
 
 // ================= InfoScreen =================
@@ -115,16 +179,32 @@ void ConfirmScreen::render(UiContext&, Painter& p) {
 // ================= TextInputScreen =================
 
 namespace {
-const std::vector<std::string>& charset() {
-  static const std::vector<std::string> cs = [] {
-    std::vector<std::string> v;
-    for (char ch = 'A'; ch <= 'Z'; ++ch) v.emplace_back(1, ch);
-    for (char ch = 'a'; ch <= 'z'; ++ch) v.emplace_back(1, ch);
-    for (char ch = '0'; ch <= '9'; ++ch) v.emplace_back(1, ch);
-    for (const char* s : {" ", "-", "+", ".", "_", "ñ", "Ñ", "á", "é", "í", "ó", "ú", "Á", "É", "Í", "Ó", "Ú"}) v.emplace_back(s);
-    return v;
-  }();
-  return cs;
+
+// Keyboard pages: rows of ten keys. Row 3 (digits) is the same on every page.
+const char* const kKeyPages[TextInputScreen::kPages][TextInputScreen::kKeyRows][TextInputScreen::kKeyCols] = {
+    {{"q", "w", "e", "r", "t", "y", "u", "i", "o", "p"},
+     {"a", "s", "d", "f", "g", "h", "j", "k", "l", "ñ"},
+     {"z", "x", "c", "v", "b", "n", "m", ",", ".", "-"},
+     {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}},
+    {{"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"},
+     {"A", "S", "D", "F", "G", "H", "J", "K", "L", "Ñ"},
+     {"Z", "X", "C", "V", "B", "N", "M", ",", ".", "-"},
+     {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}},
+    {{"á", "é", "í", "ó", "ú", "ü", "¿", "¡", "!", "?"},
+     {"Á", "É", "Í", "Ó", "Ú", "Ü", "(", ")", ":", ";"},
+     {"+", "_", "/", "@", "#", "&", "%", "*", "=", "'"},
+     {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}}};
+
+constexpr int kKeyW = 12, kKeyLeft = 4, kKeyTopRow = 2;  // keys: x = 4 + col*12, text rows 2..5; control row = row 6
+constexpr int kCtrlW = 32;
+
+// Label of the "next page" key: it shows what pressing it gives.
+const char* nextPageLabel(int page) {
+  switch (page) {
+    case 0: return "ABC";
+    case 1: return "á¿!";
+    default: return "abc";
+  }
 }
 
 // Removes the last code point.
@@ -132,38 +212,124 @@ void popCodePoint(std::string& s) {
   while (!s.empty() && (static_cast<unsigned char>(s.back()) & 0xC0) == 0x80) s.pop_back();
   if (!s.empty()) s.pop_back();
 }
+
+int rowWidth(int row) { return row == TextInputScreen::kCtrlRow ? TextInputScreen::kCtrlCols : TextInputScreen::kKeyCols; }
 }  // namespace
 
 TextInputScreen::TextInputScreen(std::string title, std::string initial, size_t maxBytes, Done done)
-    : title_(std::move(title)), text_(std::move(initial)), maxBytes_(maxBytes), done_(std::move(done)) {}
+    : title_(std::move(title)), text_(std::move(initial)), maxBytes_(maxBytes), done_(std::move(done)) {
+  page_ = text_.empty() ? 1 : 0;  // a new name starts with a capital letter
+}
+
+TextInputScreen& TextInputScreen::presets(std::vector<std::string> list) {
+  presets_ = std::move(list);
+  if (text_.empty() && !presets_.empty()) mode_ = Mode::Presets;
+  return *this;
+}
+
+bool TextInputScreen::locate(const std::string& ch, Cell& out) {
+  for (int p = 0; p < kPages; ++p)
+    for (int r = 0; r < kKeyRows; ++r)
+      for (int c = 0; c < kKeyCols; ++c)
+        if (ch == kKeyPages[p][r][c]) {
+          out = Cell{p, r, c};
+          return true;
+        }
+  return false;
+}
+
+Nav TextInputScreen::pressKey(UiContext& c) {
+  if (row_ < kCtrlRow) {
+    const std::string ch = kKeyPages[page_][row_][col_];
+    if (text_.size() + ch.size() > maxBytes_) {
+      c.toast("Nombre muy largo");
+      return Nav::none();
+    }
+    text_ += ch;
+    if (page_ != 0) page_ = 0;  // one-shot shift
+    return Nav::none();
+  }
+  switch (col_) {
+    case 0: page_ = (page_ + 1) % kPages; return Nav::none();
+    case 1:
+      if (text_.size() + 1 > maxBytes_) c.toast("Nombre muy largo");
+      else text_ += ' ';
+      return Nav::none();
+    case 2: popCodePoint(text_); return Nav::none();
+    default: return done_(c, text_);
+  }
+}
+
+Nav TextInputScreen::onPresetKey(UiContext& c, const KeyEvent& e) {
+  const size_t n = presets_.size() + 1;  // the last entry is "Escribir otro..."
+  if (isMove(e)) {
+    presetSel_ = (e.key == Key::Down) ? (presetSel_ + 1) % n : (presetSel_ + n - 1) % n;
+    if (presetSel_ < presetTop_) presetTop_ = presetSel_;
+    if (presetSel_ >= presetTop_ + Painter::kContentRows) presetTop_ = presetSel_ + 1 - Painter::kContentRows;
+    return Nav::none();
+  }
+  if (isPress(e, Key::Ok)) {
+    if (presetSel_ < presets_.size()) return done_(c, presets_[presetSel_]);
+    mode_ = Mode::Keyboard;
+    return Nav::none();
+  }
+  if (isPress(e, Key::Left) || isLong(e, Key::Left)) return Nav::pop();
+  return Nav::none();
+}
 
 Nav TextInputScreen::onKey(UiContext& c, const KeyEvent& e) {
-  const size_t n = charset().size();
+  if (mode_ == Mode::Presets) return onPresetKey(c, e);
+  if (isLong(e, Key::Left)) return Nav::pop();
   if (isMove(e)) {
-    charIdx_ = (e.key == Key::Down) ? (charIdx_ + 1) % n : (charIdx_ + n - 1) % n;
+    if (e.key == Key::Down) {
+      const int next = (row_ + 1) % (kCtrlRow + 1);
+      col_ = next == kCtrlRow ? col_ * kCtrlCols / kKeyCols : (row_ == kCtrlRow ? col_ * kKeyCols / kCtrlCols + 1 : col_);
+      row_ = next;
+    } else {
+      const int next = (row_ + kCtrlRow) % (kCtrlRow + 1);
+      col_ = next == kCtrlRow ? col_ * kCtrlCols / kKeyCols : (row_ == kCtrlRow ? col_ * kKeyCols / kCtrlCols + 1 : col_);
+      row_ = next;
+    }
     return Nav::none();
   }
   if (isPress(e, Key::Right)) {
-    if (text_.size() + charset()[charIdx_].size() <= maxBytes_) text_ += charset()[charIdx_];
-    else c.toast("Nombre muy largo");
+    col_ = (col_ + 1) % rowWidth(row_);
     return Nav::none();
   }
   if (isPress(e, Key::Left)) {
-    if (text_.empty()) return Nav::pop();
-    popCodePoint(text_);
+    col_ = (col_ + rowWidth(row_) - 1) % rowWidth(row_);
     return Nav::none();
   }
-  if (isLong(e, Key::Left)) return Nav::pop();
-  if (isPress(e, Key::Ok)) return done_(c, text_);
+  if (isPress(e, Key::Ok)) return pressKey(c);
   return Nav::none();
 }
 
 void TextInputScreen::render(UiContext&, Painter& p) {
   p.title(title_);
-  p.text(0, 2, "Texto:");
-  p.text(0, 3, text_ + "_");
-  p.text(0, 5, "Car.: < " + charset()[charIdx_] + " >");
-  p.footer("Der:+ Izq:- OK:listo");
+  if (mode_ == Mode::Presets) {
+    const size_t n = presets_.size() + 1;
+    for (size_t i = 0; i < static_cast<size_t>(Painter::kContentRows) && presetTop_ + i < n; ++i) {
+      const size_t idx = presetTop_ + i;
+      const std::string label = idx < presets_.size() ? presets_[idx] : std::string("Escribir otro...");
+      p.item(Painter::kFirstContentRow + static_cast<int>(i), label, "", idx == presetSel_);
+    }
+    p.scrollbar(n, presetTop_, Painter::kContentRows);
+    p.footer("OK:elegir Izq:atrás");
+    return;
+  }
+  // The field shows the end of a long text so the cursor is always visible.
+  std::string shown = text_ + "_";
+  while (utf8Length(shown) > static_cast<size_t>(Painter::kCols)) shown.erase(0, 1);
+  while (!shown.empty() && (static_cast<unsigned char>(shown.front()) & 0xC0) == 0x80) shown.erase(0, 1);
+  p.text(0, 1, shown);
+  for (int r = 0; r < kKeyRows; ++r)
+    for (int cidx = 0; cidx < kKeyCols; ++cidx)
+      p.keyCap(kKeyLeft + cidx * kKeyW, (kKeyTopRow + r) * Painter::kCellH, kKeyW, kKeyPages[page_][r][cidx],
+               row_ == r && col_ == cidx);
+  const char* const ctrl[kCtrlCols] = {nextPageLabel(page_), "Esp.", "Borrar", "Listo"};
+  for (int cidx = 0; cidx < kCtrlCols; ++cidx)
+    p.keyCap(cidx * kCtrlW, (kKeyTopRow + kKeyRows) * Painter::kCellH, kCtrlW, ctrl[cidx], row_ == kCtrlRow && col_ == cidx);
+  p.footer("Izq largo:cancelar");
 }
 
 // ================= NumberInputScreen =================

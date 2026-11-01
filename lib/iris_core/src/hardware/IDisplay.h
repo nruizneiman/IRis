@@ -20,6 +20,10 @@ class IDisplay {
   virtual void drawText(int x, int y, const char* utf8, FontSize size) = 0;  // y = top of glyph row
   virtual void drawHLine(int x, int y, int length) = 0;
   virtual void drawRect(int x, int y, int w, int h, bool filled) = 0;
+  // XBM bitmap: rows are padded to whole bytes, least significant bit = leftmost pixel, a set bit is lit.
+  virtual void drawBitmap(int x, int y, int w, int h, const uint8_t* xbm) = 0;
+  // Colour used by the following text / shapes: true = lit, false = dark (erases: text on a lit bar). Reset to lit by clear().
+  virtual void setDrawColor(bool lit) = 0;
   virtual void setInverted(bool inverted) = 0;  // inverts the whole panel (selection feedback)
   virtual Status flush() = 0;
 };

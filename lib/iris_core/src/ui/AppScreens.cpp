@@ -7,12 +7,30 @@
 #include "domain/Limits.h"
 #include "domain/Naming.h"
 #include "domain/SignalValidation.h"
+#include "ui/Icons.h"
 #include "ui/Utf8.h"
 #include "ui/Widgets.h"
 
 namespace iris {
 
 namespace {
+
+// Typical names offered before the keyboard so most entries need no typing. Each fits kMaxNameBytes.
+std::vector<std::string> buttonPresets() {
+  return {"Encender", "Apagar",   "Subir vol.", "Bajar vol.", "Silenciar", "Canal +",  "Canal -", "Menú",
+          "Aceptar",  "Arriba",   "Abajo",      "Izquierda",  "Derecha",   "Volver",   "Entrada", "Inicio"};
+}
+std::vector<std::string> categoryPresets() {
+  return {"TV", "Aire acond.", "Luces", "Audio", "Ventilador", "Proyector", "Decodificador", "Varios"};
+}
+std::vector<std::string> remotePresets() {
+  return {"Televisor", "Aire", "Tira LED", "Ventilador", "Parlante", "Proyector", "Decodificador"};
+}
+std::unique_ptr<TextInputScreen> withPresets(std::unique_ptr<TextInputScreen> screen, std::vector<std::string> list) {
+  screen->presets(std::move(list));
+  return screen;
+}
+
 
 using P = std::unique_ptr<Screen>;
 
@@ -490,12 +508,12 @@ P makeRemoteScreen(Id remote) {
       }
     }
     it.push_back({"+ Nuevo botón", "", [remote](UiContext&) {
-                    return Nav::push(std::make_unique<TextInputScreen>(
+                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
                         "Nuevo botón", "", limits::kMaxNameBytes, [remote](UiContext& c2, const std::string& name) {
                           auto r = c2.library.addButton(remote, name);
                           if (!finishChange(c2, r.ok() ? Status::success() : r.status(), "Botón creado")) return Nav::none();
                           return Nav::replace(makeButtonMenu(remote, r.value()));
-                        }));
+                        }), buttonPresets()));
                   }});
     return it;
   });
@@ -548,12 +566,12 @@ P makeCategoryScreen(Id cat) {
       it.push_back({r.name, numStr(r.buttons.size()) + " bot.", [rid](UiContext&) { return Nav::push(makeRemoteScreen(rid)); }});
     }
     it.push_back({"+ Nuevo control", "", [cat](UiContext&) {
-                    return Nav::push(std::make_unique<TextInputScreen>(
+                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
                         "Nuevo control", "", limits::kMaxNameBytes, [cat](UiContext& c2, const std::string& name) {
                           auto r = c2.library.addRemote(name, cat);
                           if (!finishChange(c2, r.ok() ? Status::success() : r.status(), "Control creado")) return Nav::none();
                           return Nav::replace(makeRemoteScreen(r.value()));
-                        }));
+                        }), remotePresets()));
                   }});
     return it;
   });
@@ -583,12 +601,12 @@ P makeLibraryScreen() {
       it.push_back({cat.name, numStr(n), [id](UiContext&) { return Nav::push(makeCategoryScreen(id)); }});
     }
     it.push_back({"+ Nueva categoría", "", [](UiContext&) {
-                    return Nav::push(std::make_unique<TextInputScreen>(
+                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
                         "Nueva categoría", "", limits::kMaxNameBytes, [](UiContext& c2, const std::string& name) {
                           auto r = c2.library.addCategory(name);
                           return finishChange(c2, r.ok() ? Status::success() : r.status(), "Categoría creada") ? Nav::pop()
                                                                                                                 : Nav::none();
-                        }));
+                        }), categoryPresets()));
                   }});
     return it;
   });
@@ -613,7 +631,7 @@ P makeButtonPicker(Id remote, PickFn onPick) {
       }
     }
     it.push_back({"+ Nuevo botón", "", [remote, onPick](UiContext&) {
-                    return Nav::push(std::make_unique<TextInputScreen>(
+                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
                         "Nuevo botón", "", limits::kMaxNameBytes,
                         [remote, onPick](UiContext& c2, const std::string& name) {
                           auto r = c2.library.addButton(remote, name);
@@ -621,7 +639,7 @@ P makeButtonPicker(Id remote, PickFn onPick) {
                           Nav next = onPick(c2, remote, r.value(), 1);  // the text editor is still on the stack
                           if (next.kind == Nav::Kind::Push) next.kind = Nav::Kind::Replace;
                           return next;
-                        }));
+                        }), buttonPresets()));
                   }});
     return it;
   });
@@ -651,7 +669,7 @@ P makeLearnTargetPicker() {
 
 // Create remote: name -> category -> new (empty) remote opened on top of home.
 P makeCreateRemote() {
-  return std::make_unique<TextInputScreen>("Nuevo control", "", limits::kMaxNameBytes, [](UiContext& c0, const std::string& rawName) {
+  return withPresets(std::make_unique<TextInputScreen>("Nuevo control", "", limits::kMaxNameBytes, [](UiContext& c0, const std::string& rawName) {
     const std::string name = trimName(rawName);
     Status nameOk = validateName(name);
     if (!nameOk.ok()) {
@@ -669,7 +687,7 @@ P makeCreateRemote() {
                       }});
       }
       it.push_back({"+ Nueva categoría", "", [name](UiContext&) {
-                      return Nav::push(std::make_unique<TextInputScreen>(
+                      return Nav::push(withPresets(std::make_unique<TextInputScreen>(
                           "Nueva categoría", "", limits::kMaxNameBytes, [name](UiContext& c2, const std::string& catName) {
                             auto cat = c2.library.addCategory(catName);
                             if (!cat.ok()) {
@@ -679,12 +697,12 @@ P makeCreateRemote() {
                             auto r = c2.library.addRemote(name, cat.value());
                             if (!finishChange(c2, r.ok() ? Status::success() : r.status(), "Control creado")) return Nav::none();
                             return Nav::homeThen(makeRemoteScreen(r.value()));
-                          }));
+                          }), categoryPresets()));
                     }});
       return it;
     });
     return Nav::replace(std::move(picker));
-  });
+  }), remotePresets());
 }
 
 // ---------------------------------------------------------------- tools
@@ -1017,19 +1035,18 @@ P makeSettingsScreen() {
 // ---------------------------------------------------------------- home
 
 P buildHome() {
-  auto home = std::make_unique<ListScreen>("home", "IRis", [](UiContext&) {
-    std::vector<ListItem> it;
-    it.push_back({"Controles", "", [](UiContext&) { return Nav::push(makeLibraryScreen()); }});
-    it.push_back({"Aprender señal", "", [](UiContext&) { return Nav::push(makeLearnTargetPicker()); }});
-    it.push_back({"Crear control", "", [](UiContext&) { return Nav::push(makeCreateRemote()); }});
-    it.push_back({"Herramientas IR", "", [](UiContext&) { return Nav::push(makeToolsScreen()); }});
-    it.push_back({"Configuración", "", [](UiContext&) { return Nav::push(makeSettingsScreen()); }});
+  auto home = std::make_unique<IconGridScreen>("home", "IRis", [](UiContext&) {
+    std::vector<GridItem> it;
+    it.push_back({"Controles", icons::kRemote.data(), [](UiContext&) { return Nav::push(makeLibraryScreen()); }});
+    it.push_back({"Aprender señal", icons::kLearn.data(), [](UiContext&) { return Nav::push(makeLearnTargetPicker()); }});
+    it.push_back({"Crear control", icons::kCreate.data(), [](UiContext&) { return Nav::push(makeCreateRemote()); }});
+    it.push_back({"Herramientas IR", icons::kTools.data(), [](UiContext&) { return Nav::push(makeToolsScreen()); }});
+    it.push_back({"Configuración", icons::kSettings.data(), [](UiContext&) { return Nav::push(makeSettingsScreen()); }});
     return it;
   });
   home->titleFn([](UiContext& c) {
     return utf8Justify("IRis", batteryText(c) + (c.library.dirty() ? " *" : ""), Painter::kCols);
   });
-  home->footer("OK:elegir");
   return home;
 }
 

@@ -20,7 +20,7 @@ TEST_CASE("scenario ui: duplicate a control from its menu") {
   r.press(Key::Right);
   CHECK(open(r, "Duplicar"));
   CHECK(r.shows("Sala 2"));  // the editor starts with a suggested name
-  r.press(Key::Ok);
+  kbFinish(r);
   REQUIRE(r.library.data().remotes.size() == 2);
   CHECK(r.library.data().remotes[1].name == "Sala 2");
   CHECK(r.library.data().remotes[1].buttons[0].signal.has_value());
@@ -36,9 +36,8 @@ TEST_CASE("scenario ui: duplicating with a taken name stays in the editor with a
   open(r, "TV");
   r.press(Key::Right);
   open(r, "Duplicar");
-  r.press(Key::Left);  // delete "2"
-  r.press(Key::Left);  // delete the space
-  r.press(Key::Ok);    // "Sala" already exists
+  kbErase(r, 2);  // delete "2" and the space
+  kbFinish(r);    // "Sala" already exists
   CHECK(r.shows("Ya existe"));
   CHECK(r.library.data().remotes.size() == 1);
   CHECK(r.topId() == std::string("text-input"));

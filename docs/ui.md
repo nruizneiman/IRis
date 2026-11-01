@@ -58,3 +58,21 @@ which screen is visible; display failures never block the logic (the picture is 
 - Only one capture and one transmission at a time; receiver 2 is not enabled.
 - Protocol-specific repeat frames are not generated yet (Stage 5 adapter).
 - Visual tuning (font legibility, title rule position, inversion command) is pending on the real panel.
+
+## Look and text entry (2026-11-01 redesign, simulator only so far)
+
+Requested style: the icon menu of the nRF-Box firmware (MIT, a complete firmware, not a library: only the layout idea was
+used, all code and icons here are original).
+
+- **Title bar**: a lit bar with dark text on every screen. The selected list row is a lit bar too (the `>` marker stays in
+  the text for tests). Lists longer than six rows show a 2 px scroll bar in the right-most pixel columns.
+- **Home**: `IconGridScreen`, up to six 16x16 icons in 3 columns x 2 rows (`ui/Icons.h`, drawn as text and converted to XBM at
+  compile time), the selected one framed and its name centred on the bottom row. Left/Right move by one, Up/Down by a
+  row of three, OK opens; the grid wraps.
+- **Text entry**: `TextInputScreen` is now an on-screen keyboard: 4 rows of 10 keys plus a row *Aa / Esp. / Borrar / Listo*,
+  three pages (lower case, upper case, accents and symbols). A new name starts in upper case and each letter returns to
+  lower case. Arrows move over the keys, OK presses one, Left long press cancels.
+- **Suggested names**: new button, category and control names first show a list of typical names (OK picks one); the last
+  entry, *Escribir otro...*, opens the keyboard. Renames start on the keyboard.
+- **Not yet verified on the real panel**: the rendering of dark text on lit bars, key spacing (12 px cells), icon legibility
+  and the 5x8 font in the key row. The pictures checked so far come from `FakeDisplay::toPbm` (text drawn as dither blocks).

@@ -17,17 +17,25 @@ using namespace uihelp;
 TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back") {
   UiRig r;
   CHECK(r.topId() == std::string("home"));
-  CHECK(r.shows("Controles"));
-  CHECK(r.shows("Aprender señal"));
-  CHECK(r.shows("Crear control"));
-  CHECK(r.shows("Herramientas IR"));
-  CHECK(r.shows("Configuración"));
+  // Icon grid: one 16x16 icon per entry, a frame on the selected one, only its name as text, battery in the title bar.
+  CHECK(r.display.shownBitmaps() == 5);
+  CHECK(r.display.shownShapes() == 2);  // title bar + selection frame
+  CHECK(isSelected(r.screen(), "Controles"));
+  CHECK_FALSE(r.shows("Aprender señal"));
   CHECK(r.shows("Bat n/d"));  // no measurement circuit: never an invented percentage
-  r.press(Key::Up);           // wraps to the last item
-  CHECK(r.screen().find("> Configuración") != std::string::npos);
+  r.press(Key::Right);
+  CHECK(isSelected(r.screen(), "Aprender señal"));
+  r.press(Key::Left);
+  CHECK(isSelected(r.screen(), "Controles"));
+  r.press(Key::Left);         // wraps to the last of the five
+  CHECK(isSelected(r.screen(), "Configuración"));
+  r.press(Key::Right);
+  r.press(Key::Up);           // a whole row back: 0 -> 2 (wrapping over five entries)
+  CHECK(isSelected(r.screen(), "Crear control"));
   r.press(Key::Down);
-  CHECK(r.screen().find("> Controles") != std::string::npos);
-  r.press(Key::Left);         // nothing below home
+  CHECK(isSelected(r.screen(), "Controles"));
+  r.press(Key::Left);
+  r.press(Key::Right);        // nothing below home: it stays on the home screen
   CHECK(r.topId() == std::string("home"));
   CHECK(open(r, "Herramientas IR"));
   CHECK(r.ui.depth() == 2);
@@ -76,23 +84,26 @@ TEST_CASE("scenario ui: accented names are supported end to end") {
   CHECK(r.shows("Niño"));
 }
 
-TEST_CASE("scenario ui: text picker backspace, cancel and length limit") {
+TEST_CASE("scenario ui: keyboard backspace, cancel and length limit") {
   UiRig r;
   open(r, "Controles");
   open(r, "+ Nueva categoría");
   typeText(r, "ABC", false);
-  r.press(Key::Left);  // delete C
-  r.press(Key::Ok);
+  kbErase(r, 1);  // delete C
+  kbFinish(r);
   CHECK(r.library.data().categories.at(0).name == "AB");
 
   open(r, "+ Nueva categoría");
-  r.press(Key::Left);  // empty text: cancel
+  r.longPress(Key::Left);  // Left long press cancels without saving
   CHECK(r.topId() == std::string("library"));
   CHECK(r.library.data().categories.size() == 1);
 
   open(r, "+ Nueva categoría");
   typeText(r, std::string(limits::kMaxNameBytes, 'a'), false);
-  r.press(Key::Right);  // one more: refused with a message
+  auto* in = dynamic_cast<TextInputScreen*>(r.ui.top());
+  REQUIRE(in != nullptr);
+  kbMoveTo(r, in, 0, 0);
+  r.press(Key::Ok);  // one more key: refused with a message
   CHECK(r.shows("muy largo"));
 }
 
@@ -107,7 +118,8 @@ TEST_CASE("scenario ui: duplicate and empty names are rejected with a Spanish me
   CHECK(r.topId() == std::string("text-input"));  // stays so the user can fix it
   r.longPress(Key::Left);
   open(r, "+ Nueva categoría");
-  r.press(Key::Ok);  // empty
+  kbOpen(r);
+  kbFinish(r);  // empty
   CHECK(r.shows("inválido"));
 }
 
@@ -335,7 +347,7 @@ TEST_CASE("scenario ui: rename a button, delete its signal, delete the button") 
   open(r, "Sala");
   r.press(Key::Right);
   CHECK(open(r, "Renombrar"));
-  for (int i = 0; i < 5; ++i) r.press(Key::Left);  // erase "Power"
+  kbErase(r, 5);  // erase "Power"
   typeText(r, "Enc");
   CHECK(r.library.findButton(ids.remote, ids.button)->name == "Enc");
   CHECK(r.topId() == std::string("remote"));
@@ -637,7 +649,7 @@ TEST_CASE("scenario ui: display failure never blocks navigation and recovers") {
   r.press(Key::Down);
   CHECK_FALSE(r.ctx.displayHealthy);
   CHECK(r.log.contains("flush failed"));
-  r.press({Key::Down, Key::Down, Key::Ok});  // blind navigation: Herramientas IR is the 4th item
+  r.press(Key::Ok);  // blind navigation: the Down above already moved the selection to Herramientas IR (0 -> 3)
   CHECK(r.topId() == std::string("tools"));  // the UI logic keeps working without a picture
   r.display.setFailFlush(false);
   r.advance(2500);
