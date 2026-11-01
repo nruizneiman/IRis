@@ -1,0 +1,26 @@
+# Demo: learn a (synthetic) NEC signal, store a manual one, persist, reboot, send, explore.
+# Every capture here is SYNTHETIC and every transmission is SIMULATED.
+cat add TV
+remote add 1 Sala
+button add 2 Power
+button add 2 Vol+
+learn 5000
+inject nec 0 8
+learn-show
+learn-save 2 3
+manual 2 4 sony 1 18 12
+save
+reboot
+list
+send 2 3
+advance 300
+txlog
+# bounded exploration: 3 codes, 300 ms gap (the emitter cannot tell if a device reacted)
+explore sony 12 1 1 0 2 10 300
+explore-start
+advance 3000
+explore-status
+explore-log
+fault write on
+save
+status

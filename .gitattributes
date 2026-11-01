@@ -1,0 +1,6 @@
+# Keep line endings stable across Windows and Linux checkouts.
+* text=auto eol=lf
+
+# Test fixtures are compared byte for byte (library_v1.irs carries a length and a CRC32 in its envelope):
+# never convert their line endings.
+test/fixtures/** -text

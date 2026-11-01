@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "author": "IRis project (UNVERIFIED: not yet opened in Wokwi)",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "board-ssd1306", "id": "oled", "top": -140, "left": 120, "attrs": { "i2cAddress": "0x3c" } },
+    { "type": "wokwi-pushbutton", "id": "btnUp", "top": -120, "left": -140, "attrs": { "color": "grey" } },
+    { "type": "wokwi-pushbutton", "id": "btnDown", "top": -60, "left": -140, "attrs": { "color": "grey" } },
+    { "type": "wokwi-pushbutton", "id": "btnLeft", "top": 0, "left": -140, "attrs": { "color": "grey" } },
+    { "type": "wokwi-pushbutton", "id": "btnRight", "top": 60, "left": -140, "attrs": { "color": "grey" } },
+    { "type": "wokwi-pushbutton", "id": "btnOk", "top": 120, "left": -140, "attrs": { "color": "green" } },
+    { "type": "wokwi-ir-receiver", "id": "irRx", "top": 200, "left": 140, "attrs": {} },
+    { "type": "wokwi-led", "id": "txLed", "top": 260, "left": -60, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "txR", "top": 330, "left": -60, "attrs": { "value": "330" } }
+  ],
+  "connections": [
+    ["oled:GND", "esp:GND.1", "black", []],
+    ["oled:VCC", "esp:3V3", "red", []],
+    ["oled:SDA", "esp:21", "blue", []],
+    ["oled:SCL", "esp:22", "green", []],
+
+    ["btnUp:1.l", "esp:13", "gray", []],
+    ["btnUp:2.l", "esp:GND.1", "black", []],
+    ["btnDown:1.l", "esp:14", "gray", []],
+    ["btnDown:2.l", "esp:GND.1", "black", []],
+    ["btnLeft:1.l", "esp:27", "gray", []],
+    ["btnLeft:2.l", "esp:GND.1", "black", []],
+    ["btnRight:1.l", "esp:26", "gray", []],
+    ["btnRight:2.l", "esp:GND.1", "black", []],
+    ["btnOk:1.l", "esp:25", "green", []],
+    ["btnOk:2.l", "esp:GND.1", "black", []],
+
+    ["irRx:GND", "esp:GND.1", "black", []],
+    ["irRx:VCC", "esp:3V3", "red", []],
+    ["irRx:DAT", "esp:34", "orange", []],
+
+    ["esp:23", "txR:1", "red", []],
+    ["txR:2", "txLed:A", "red", []],
+    ["txLed:C", "esp:GND.1", "black", []]
+  ],
+  "dependencies": {}
+}

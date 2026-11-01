@@ -1,0 +1,5 @@
+[wokwi]
+version = 1
+# Wokwi simulates an SSD1306 (no SH1106), so use the SSD1306 firmware build.
+firmware = '../.pio/build/esp32dev_ssd1306/firmware.bin'
+elf = '../.pio/build/esp32dev_ssd1306/firmware.elf'

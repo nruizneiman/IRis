@@ -1,0 +1,33 @@
+# UI demo: the real screens and button handling, driven by simulated key presses.
+# 'key' goes through the real debouncer; 'screen' prints the 21x8 text grid of the simulated OLED.
+# Nothing here is hardware: captures are SYNTHETIC and transmissions are SIMULATED.
+cat add TV
+remote add 1 Sala
+button add 2 Power
+screen
+# Controles > TV > Sala > Power (empty button opens its action menu)
+key ok
+key ok
+key ok
+key ok
+# Aprender señal
+key down
+key ok
+inject nec 0 8
+advance 100
+screen
+# Guardar
+key ok
+screen
+# back home, then Herramientas IR > Últimas capturas
+key left long
+key down
+key down
+key down
+key ok
+key down
+key down
+key down
+key ok
+screen
+key left long
