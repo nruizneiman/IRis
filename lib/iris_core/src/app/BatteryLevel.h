@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 namespace iris {
 
@@ -40,5 +41,40 @@ inline int batterySegments(int percent) {
   if (percent >= 10) return 1;
   return 0;
 }
+
+// What the screen shows: the voltage is noisy (ADC) and dips with every transmission, so a raw estimate would flicker.
+// update() takes at most one sample per kSampleIntervalMs, smooths it (exponential average, 1/8 of the difference per
+// sample) and moves the shown percentage only when the new value differs from it by kHysteresisPercent or more.
+// A missing reading (no circuit) clears it, and the next reading starts fresh.
+class BatteryEstimator {
+ public:
+  static constexpr uint32_t kSampleIntervalMs = 500;
+  static constexpr int kHysteresisPercent = 2;
+
+  void update(uint32_t nowMs, std::optional<uint16_t> mv) {
+    if (!mv) {
+      have_ = false;
+      return;
+    }
+    if (have_ && nowMs - lastMs_ < kSampleIntervalMs) return;
+    lastMs_ = nowMs;
+    const int32_t sample = static_cast<int32_t>(*mv) * kScale;
+    smoothed_ = have_ ? smoothed_ + (sample - smoothed_) / 8 : sample;
+    const int now = batteryPercentApprox(static_cast<uint16_t>(smoothed_ / kScale));
+    if (!have_ || now - shown_ >= kHysteresisPercent || shown_ - now >= kHysteresisPercent) shown_ = now;
+    have_ = true;
+  }
+
+  bool valid() const { return have_; }
+  int percent() const { return shown_; }  // meaningful only when valid()
+  int segments() const { return batterySegments(shown_); }
+
+ private:
+  static constexpr int32_t kScale = 16;  // fixed point: keeps the 1/8 step from losing the small differences
+  bool have_ = false;
+  uint32_t lastMs_ = 0;
+  int32_t smoothed_ = 0;
+  int shown_ = 0;
+};
 
 }  // namespace iris

@@ -47,8 +47,8 @@ TEST_CASE("scenario ui: with a battery reading the title shows an estimate and t
   UiRig r;
   r.battery.set(3870);
   r.advance(300);
-  CHECK(r.shows("~"));                 // estimated, marked as such
-  CHECK(r.shows("%"));
+  CHECK(r.shows("77%"));               // 3.87 V on the generic curve; the "~" is only on the diagnostics page
+  CHECK_FALSE(r.shows("~"));
   CHECK_FALSE(r.shows("3.87 V"));      // the exact voltage is on the diagnostics page
   CHECK_FALSE(r.shows("Bat n/d"));
   CHECK(r.display.shownShapes() == 2 + 1 + 1 + 4);  // title bar + frame, outline, nub, four bars (3.87 V is about 77 %)

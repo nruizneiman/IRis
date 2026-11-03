@@ -42,3 +42,43 @@ TEST_CASE("battery level: bars follow the percentage thresholds") {
   CHECK(batterySegments(9) == 0);
   CHECK(batterySegments(0) == 0);
 }
+
+TEST_CASE("battery estimator: sampling noise does not move the shown percentage") {
+  BatteryEstimator e;
+  uint32_t t = 0;
+  e.update(t, 3770);
+  const int first = e.percent();
+  int changes = 0;
+  for (int i = 0; i < 200; ++i) {
+    t += 500;
+    const int before = e.percent();
+    e.update(t, (i % 2) ? 3800 : 3740);  // +-30 mV around 3.77 V
+    if (e.percent() != before) ++changes;
+  }
+  CHECK(e.valid());
+  CHECK(changes <= 2);
+  CHECK(e.percent() >= first - 3);
+  CHECK(e.percent() <= first + 3);
+}
+
+TEST_CASE("battery estimator: one sample per interval, and a real drop is followed") {
+  BatteryEstimator e;
+  e.update(0, 4000);
+  CHECK(e.percent() == 90);
+  e.update(100, 3000);  // too soon: ignored
+  CHECK(e.percent() == 90);
+  uint32_t t = 0;
+  for (int i = 0; i < 60; ++i) e.update(t += BatteryEstimator::kSampleIntervalMs, 3600);
+  CHECK(e.percent() == 50);
+}
+
+TEST_CASE("battery estimator: a missing reading clears it and the next one starts fresh") {
+  BatteryEstimator e;
+  e.update(0, 4000);
+  REQUIRE(e.valid());
+  e.update(600, std::nullopt);
+  CHECK_FALSE(e.valid());
+  e.update(700, 3600);  // starts at the new value, not an average with the old one
+  CHECK(e.valid());
+  CHECK(e.percent() == 50);
+}

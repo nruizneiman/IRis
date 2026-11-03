@@ -1242,16 +1242,15 @@ P buildHome() {
   });
   // Without a reading: "Bat n/d". With one: an estimated percentage ("~57%") and the bars; the exact voltage is on the
   // diagnostics page.
-  home->titleFn([](UiContext& c) {
+  // The title and the gauge share one smoothed estimate, so the number does not jump with every sample.
+  auto battery = std::make_shared<BatteryEstimator>();
+  home->titleFn([battery](UiContext& c) {
+    battery->update(c.clock.nowMs(), c.battery.readMillivolts());
     const std::string dirty = c.library.dirty() ? " *" : "";
-    const auto mv = c.battery.readMillivolts();
-    if (!mv) return utf8Justify("IRis", "Bat n/d" + dirty, Painter::kCols);
-    return utf8Justify("IRis", "~" + std::to_string(batteryPercentApprox(*mv)) + "%" + dirty, Painter::kCols - 3);
+    if (!battery->valid()) return utf8Justify("IRis", "Bat n/d" + dirty, Painter::kCols);
+    return utf8Justify("IRis", std::to_string(battery->percent()) + "%" + dirty, Painter::kCols - 3);
   });
-  home->gaugeFn([](UiContext& c) {
-    const auto mv = c.battery.readMillivolts();
-    return mv ? batterySegments(batteryPercentApprox(*mv)) : -1;
-  });
+  home->gaugeFn([battery](UiContext&) { return battery->valid() ? battery->segments() : -1; });
   return home;
 }
 
