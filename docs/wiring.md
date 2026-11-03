@@ -281,8 +281,9 @@ switch, not a GPIO.
 ## 5. What not to do
 
 - Do not drive the LED from a GPIO. (Current state: the tester asked for exactly that as a **temporary bench measure**
-  on 2026-11-01 because only IRFZ44N parts were at hand, with 220 Ω to GND; see `docs/logs/2026-11-01-b8.md`. Fit a
-  proper driver, a logic-level MOSFET or an NPN, before treating the device as finished.)
+  on 2026-11-01 because only IRFZ44N parts were at hand, with 220 Ω to GND; see `docs/logs/2026-11-01-b8.md`. Closed
+  on 2026-11-03: a 2N2222 now drives the LED from 5 V, see `docs/logs/2026-11-02-power.md`. Still to do: the 100 kΩ
+  base pull-down on the final board, and the LED current and range measurements.)
 - Do not connect the LED branch to the battery before the current-limiting resistor and the gate pull-down exist.
 - Do not leave a transmission test running unattended; the bench commands are bounded on purpose.
 - Do not charge a cell while the device runs from the same TP4056 output (no power-path).
