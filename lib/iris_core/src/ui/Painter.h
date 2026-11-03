@@ -37,6 +37,8 @@ class Painter {
   void keyCap(int x, int y, int w, std::string_view label, bool selected);
   void bitmap(int x, int y, int w, int h, const uint8_t* xbm);  // XBM, see IDisplay::drawBitmap
   void frame(int x, int y, int w, int h);                       // 1 px outline
+  // Battery outline with 0..4 bars, dark on the lit title bar, in its right-most 17 pixels. Call after title().
+  void batteryGauge(int segments);
   // Draws a transient message on the footer row and keeps the screen from drawing over it.
   void toastFooter(std::string_view s);
   uint32_t hash() const { return hash_; }

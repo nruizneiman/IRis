@@ -21,6 +21,11 @@ TEST_CASE("render dump (only when IRIS_DUMP_DIR is set)") {
   if (!dir) return;
   UiRig r;
   dump(r, dir, "home_0");
+  r.battery.set(3770);
+  r.advance(300);
+  dump(r, dir, "home_battery");
+  r.battery.set(std::nullopt);
+  r.advance(300);
   r.press(Key::Right);
   r.press(Key::Right);
   dump(r, dir, "home_2");

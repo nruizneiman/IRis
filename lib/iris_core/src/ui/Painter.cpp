@@ -103,6 +103,17 @@ void Painter::frame(int x, int y, int w, int h) {
   display_.drawRect(x, y, w, h, false);
 }
 
+void Painter::batteryGauge(int segments) {
+  constexpr int kBodyW = 15, kNubW = 2, kSegPitch = 3;
+  const int x = display_.width() - kBodyW - kNubW - 1;
+  mix("battery", x, segments);
+  display_.setDrawColor(false);
+  display_.drawRect(x, 1, kBodyW, 6, false);
+  display_.drawRect(x + kBodyW, 3, kNubW, 2, true);
+  for (int i = 0; i < segments && i < 4; ++i) display_.drawRect(x + 2 + i * kSegPitch, 2, 2, 4, true);
+  display_.setDrawColor(true);
+}
+
 void Painter::toastFooter(std::string_view s) {
   footerLocked_ = false;
   text(0, kFooterRow, s);

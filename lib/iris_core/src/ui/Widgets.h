@@ -62,6 +62,9 @@ class IconGridScreen : public Screen {
 
   IconGridScreen(std::string id, std::string title, Provider provider);
   IconGridScreen& titleFn(TitleFn fn) { titleFn_ = std::move(fn); return *this; }
+  // Battery bars in the title bar: returns 0..4 segments, or a negative number for "no gauge".
+  using GaugeFn = std::function<int(UiContext&)>;
+  IconGridScreen& gaugeFn(GaugeFn fn) { gaugeFn_ = std::move(fn); return *this; }
 
   const char* id() const override { return id_.c_str(); }
   void onEnter(UiContext& c) override { refresh(c); }
@@ -77,6 +80,7 @@ class IconGridScreen : public Screen {
   std::string id_, title_;
   Provider provider_;
   TitleFn titleFn_;
+  GaugeFn gaugeFn_;
   std::vector<GridItem> items_;
   size_t sel_ = 0;
 };

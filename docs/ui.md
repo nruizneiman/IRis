@@ -23,8 +23,13 @@ Keys held while the device boots are ignored until released.
 
 The OLED is treated as a 21 x 8 character grid (cells of 6 x 8 px): row 0 title, rows 1-6 content,
 row 7 footer with key hints (replaced by a 2 s message when something happens). Text longer than a
-row is cut; list rows with a right-aligned value truncate the label first. No percentage is shown
-for the battery: without a measurement circuit the home screen says `Bat n/d`.
+row is cut; list rows with a right-aligned value truncate the label first.
+
+Battery: without a measurement circuit (build without `IRIS_BATTERY_RATIO_PERMILLE`, or a pin that reads under
+about 0.3 V) the home title bar says `Bat n/d`. With one it shows an **estimated** level, `~77%`, plus a battery
+outline with 0-4 bars (4 from 75 %, 3 from 50 %, 2 from 25 %, 1 from 10 %). The estimate comes from a generic
+lithium-ion curve (`app/BatteryLevel.h`, anchor points quoted there), not from this cell, and under load it reads
+low; the exact voltage and the estimate are on *Herramientas IR > Diagnóstico HW*.
 
 ## Map
 

@@ -19,7 +19,7 @@ only as a fake; **Documented** = guide written, nothing executed. Nothing here h
 | **Physical test plan** (`docs/physical-test-plan.md`, B0-B11) with log template | Documented | Never executed; pass criteria marked "proposed" |
 | Console simulator, fakes | Simulated | |
 | Wokwi | Prepared, unvalidated | Never opened |
-| Battery measurement (`IBatteryMonitor` for the divider) | Pending | Needs calibration data from B9; the home screen shows `Bat n/d` |
+| Battery measurement (`IBatteryMonitor` for the divider) | Bench-checked at one point | 3.8 V on screen against 3.77 V on the multimeter (2026-11-03); other voltages not compared. The title bar shows an estimated level and bars (simulated, flashed on the panel pending) |
 | Second emitter channel, state-based (A/C) protocols, RAW editor on the device, library export | Pending | Listed in `docs/risks.md` |
 
 ## Tests

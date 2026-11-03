@@ -117,6 +117,10 @@ Nav IconGridScreen::onKey(UiContext& c, const KeyEvent& e) {
 
 void IconGridScreen::render(UiContext& c, Painter& p) {
   p.title(titleFn_ ? titleFn_(c) : title_);
+  if (gaugeFn_) {
+    const int segments = gaugeFn_(c);
+    if (segments >= 0) p.batteryGauge(segments);
+  }
   for (size_t i = 0; i < items_.size(); ++i) {
     const int col = static_cast<int>(i) % kGridCols, row = static_cast<int>(i) / kGridCols;
     const int x = kGridLeft + col * kGridCellW + (kGridCellW - icons::kSize) / 2;

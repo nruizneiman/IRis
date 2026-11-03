@@ -43,11 +43,24 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   CHECK(r.ui.depth() == 1);
 }
 
-TEST_CASE("scenario ui: battery voltage is shown when a circuit reports it") {
+TEST_CASE("scenario ui: with a battery reading the title shows an estimate and the bars, not the voltage") {
   UiRig r;
   r.battery.set(3870);
   r.advance(300);
-  CHECK(r.shows("3.87 V"));
+  CHECK(r.shows("~"));                 // estimated, marked as such
+  CHECK(r.shows("%"));
+  CHECK_FALSE(r.shows("3.87 V"));      // the exact voltage is on the diagnostics page
+  CHECK_FALSE(r.shows("Bat n/d"));
+  CHECK(r.display.shownShapes() == 2 + 1 + 1 + 4);  // title bar + frame, outline, nub, four bars (3.87 V is about 77 %)
+}
+
+TEST_CASE("scenario ui: the diagnostics page gives the exact voltage and the estimate") {
+  UiRig r;
+  r.battery.set(3770);
+  CHECK(open(r, "Herramientas IR"));
+  CHECK(open(r, "Diagnóstico HW"));
+  CHECK(r.shows("3.77 V"));
+  CHECK(r.shows("Nivel est.: ~"));
 }
 
 TEST_CASE("scenario ui: create category, remote and button with the text picker") {

@@ -218,8 +218,8 @@ Reads half the battery voltage (at most about 2.1 V at 4.2 V, inside the ADC ran
 time. The ESP32 ADC is non-linear and needs calibration against a multimeter. The firmware reads this pin **only when
 built with `-DIRIS_BATTERY_RATIO_PERMILLE=<ratio x 1000>`** (2000 for two equal resistors; `AdcBatteryMonitor`, median of
 9 samples, `analogReadMilliVolts` factory calibration, *not verified on the board*). Without the flag the home screen
-keeps showing `Bat n/d`, because a floating pin would show noise. With it the title bar shows the voltage (`3.87 V`); no
-percentage is invented. Use the bench command `a` to compare the pin millivolts with a multimeter first.
+keeps showing `Bat n/d`, because a floating pin would show noise. With it the title bar shows an estimated level
+(`~77%`, from a generic curve, see `docs/ui.md`) with bars, and the exact voltage (`3.87 V`) is on the diagnostics page. Use the bench command `a` to compare the pin millivolts with a multimeter first.
 
 Only 1 kΩ and 10 kΩ parts are on the bench (no 100 kΩ): two 10 kΩ give the same ratio at 210 µA instead of 21 µA, about
 0.2 mA against the roughly 80 mA of the running board; take the divider from the **switched** side (after the power switch)

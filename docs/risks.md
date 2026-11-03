@@ -12,7 +12,7 @@ Updated at the end of Stage 7. Nothing has been run on the real board.
 | MOSFET | IRFZ44N: threshold 2-4 V and Rds(on) specified at VGS = 10 V (distributor datasheet figures), so not guaranteed at 3.3 V | Measure Vds on every unit in B6, or use a logic-level part whose datasheet you read (`docs/wiring.md` 4.5) |
 | Power path (18650, charger, boost) | Brownouts during emission. XL6009 datasheet revisions disagree on the minimum input (3.6 V vs 5 V). A TP4056-class charger must not feed the load while charging | Bench test B9b, power-path stage or "off while charging", separate IR rail, bulk capacitors, reset reason in *Historial arranques* |
 | TSOP38238 | Pinout 1 = OUT, 2 = GND, 3 = VS and supply 2.0-5.5 V were read in the Vishay datasheet, but your parts may be clones or breakout boards with another order. Sony codes may decode less reliably with this version (datasheet) | Package drawing + B1/B5 |
-| Battery measurement | No circuit yet | Home screen shows `Bat n/d` until one exists |
+| Battery measurement | The ADC is non-linear and only one point was compared with a multimeter; the percentage is an estimate from a generic curve, and the voltage at which the boost converter stops is not known | Compare near 3.3 V and 4.2 V; the UI marks the level with `~` and shows the exact voltage on the diagnostics page |
 
 ## Software limitations
 

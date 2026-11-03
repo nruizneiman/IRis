@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <memory>
 
+#include "app/BatteryLevel.h"
 #include "app/SignalBuilder.h"
 #include "domain/Limits.h"
 #include "domain/Naming.h"
@@ -186,9 +187,9 @@ std::vector<std::string> diagnosticsLines(UiContext& c) {
   }
   l.push_back(std::string("Emisor: ") + tx);
   {
-    std::string bat = batteryText(c);
-    if (bat == "Bat n/d") bat = "n/d";
-    l.push_back("Batería: " + bat);
+    const auto mv = c.battery.readMillivolts();
+    l.push_back("Batería: " + (mv ? batteryText(c) : std::string("n/d")));
+    if (mv) l.push_back("Nivel est.: ~" + std::to_string(batteryPercentApprox(*mv)) + "%");
   }
   l.push_back("Reinicio: " + c.info.resetReason);
   l.push_back("Almacén: " + c.info.storage);
@@ -1239,8 +1240,17 @@ P buildHome() {
                   }});
     return it;
   });
+  // Without a reading: "Bat n/d". With one: an estimated percentage ("~57%") and the bars; the exact voltage is on the
+  // diagnostics page.
   home->titleFn([](UiContext& c) {
-    return utf8Justify("IRis", batteryText(c) + (c.library.dirty() ? " *" : ""), Painter::kCols);
+    const std::string dirty = c.library.dirty() ? " *" : "";
+    const auto mv = c.battery.readMillivolts();
+    if (!mv) return utf8Justify("IRis", "Bat n/d" + dirty, Painter::kCols);
+    return utf8Justify("IRis", "~" + std::to_string(batteryPercentApprox(*mv)) + "%" + dirty, Painter::kCols - 3);
+  });
+  home->gaugeFn([](UiContext& c) {
+    const auto mv = c.battery.readMillivolts();
+    return mv ? batterySegments(batteryPercentApprox(*mv)) : -1;
   });
   return home;
 }
