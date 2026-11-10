@@ -84,3 +84,12 @@ used, all code and icons here are original).
   entry, *Escribir otro...*, opens the keyboard. Renames start on the keyboard.
 - **Not yet verified on the real panel**: the rendering of dark text on lit bars, key spacing (12 px cells), icon legibility
   and the 5x8 font in the key row. The pictures checked so far come from `FakeDisplay::toPbm` (text drawn as dither blocks).
+
+## Language
+
+English is the default; Spanish is selectable in *Settings > Language* and is saved with the settings (`lang=` line).
+The screens are written with Spanish text and translated when drawn (`ui/I18n.h`, catalog Spanish -> English; unknown text
+is shown as written). Consequence: names the user typed or imported are never translated, except that a name equal to a
+catalog entry (for example a category called "Controles") is shown translated. The scripted tests run in Spanish
+(`UiRig`), and `test_language.cpp` walks the main screens in English and fails if Spanish text is left on them. A new
+screen needs its strings added to the catalog.

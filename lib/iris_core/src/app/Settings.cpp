@@ -9,9 +9,9 @@
 namespace iris {
 
 std::string serializeSettings(const Settings& s) {
-  char body[64];
-  std::snprintf(body, sizeof body, "invert=%d\ntimeout=%u\n", s.invertDisplay ? 1 : 0,
-                static_cast<unsigned>(s.captureTimeoutSec));
+  char body[80];
+  std::snprintf(body, sizeof body, "invert=%d\ntimeout=%u\nlang=%u\n", s.invertDisplay ? 1 : 0,
+                static_cast<unsigned>(s.captureTimeoutSec), static_cast<unsigned>(s.language));
   const std::string b = body;
   char header[48];
   std::snprintf(header, sizeof header, "IRISCFG 1 %08lx %lu\n", static_cast<unsigned long>(crc32(b)),
@@ -48,6 +48,8 @@ Result<Settings> deserializeSettings(const std::string& text) {
     if (k == "invert" && (v == 0 || v == 1)) s.invertDisplay = v == 1;
     else if (k == "timeout" && v > 0 && Settings::validTimeout(static_cast<unsigned>(v))) {
       s.captureTimeoutSec = static_cast<uint8_t>(v);
+    } else if (k == "lang" && v >= 0 && v < static_cast<long>(kLangCount)) {
+      s.language = static_cast<Lang>(v);
     }
   }
   return s;

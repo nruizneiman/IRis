@@ -8,6 +8,7 @@
 
 #include "Fixtures.h"
 #include "UiRig.h"
+#include "ui/I18n.h"
 #include "ui/Widgets.h"
 
 namespace uihelp {
@@ -30,7 +31,7 @@ inline bool isSelected(const std::string& screen, const std::string& label) {
 // Moves the cursor with Down until `label` is selected. False if never found.
 inline bool select(UiRig& r, const std::string& label) {
   for (int i = 0; i < 40; ++i) {
-    if (isSelected(r.screen(), label)) return true;
+    if (isSelected(r.screen(), translate(r.settings.language, label))) return true;
     // On the icon grid Down jumps a whole row (it would only alternate between two icons): walk with Right there.
     r.press(r.topId() == std::string("home") ? Key::Right : Key::Down);
   }

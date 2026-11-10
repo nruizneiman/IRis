@@ -54,6 +54,8 @@ struct UiRig {
     info.pinLines = {"Pines: n/d (simulado)"};
     const BootReport boot = loadPersistentData(flash, repo, library, settingsStore, settings, log);
     ctx.persistEnabled = boot.persistEnabled;
+    // The scripted tests read Spanish text; the device default is English (kDefaultLang), which tests ask for explicitly.
+    if (!flash.exists(SettingsStore::key())) settings.language = Lang::Es;
     if (!boot.notice.empty()) ctx.toast(boot.notice, 4000);
     display.begin();
     ui.start();

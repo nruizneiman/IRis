@@ -163,6 +163,7 @@ void UiApp::renderIfNeeded(bool force) {
   if (!ctx_.displayHealthy && now - lastDisplayRetryMs_ < 2000) return;  // do not hammer a dead bus
 
   lastRenderMs_ = now;
+  painter_.setLanguage(ctx_.settings.language);
   painter_.begin();
   // The toast is drawn first and owns the footer row, so the screen's own footer cannot overlap it.
   if (const std::string* toast = ctx_.activeToast()) painter_.toastFooter(*toast);

@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include "hardware/IDisplay.h"
+#include "ui/I18n.h"
 
 namespace iris {
 
@@ -23,6 +24,7 @@ class Painter {
 
   explicit Painter(IDisplay& display) : display_(display) {}
 
+  void setLanguage(Lang lang) { lang_ = lang; }  // text is translated when drawn (see ui/I18n.h)
   void begin();  // clears the back buffer and the hash
   void text(int col, int row, std::string_view s);  // clipped to the grid
   void title(std::string_view s);
@@ -46,7 +48,9 @@ class Painter {
 
  private:
   void mix(std::string_view s, int a, int b);
+  void rawText(int col, int row, std::string_view s);  // no translation: the caller already did it
 
+  Lang lang_ = Lang::Es;  // the source text language: no translation until a screen sets one
   IDisplay& display_;
   uint32_t hash_ = 2166136261u;
   bool footerLocked_ = false;

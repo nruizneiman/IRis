@@ -11,6 +11,7 @@
 #include "domain/Naming.h"
 #include "domain/SignalValidation.h"
 #include "import/FlipperIr.h"
+#include "ui/I18n.h"
 #include "ui/Icons.h"
 #include "ui/Utf8.h"
 #include "ui/Widgets.h"
@@ -977,6 +978,12 @@ P makeSettingsScreen() {
                         break;
                       }
                     }
+                    if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
+                    return Nav::none();
+                  }});
+    // The language name is always shown in its own language, so it can be found whatever the current one is.
+    it.push_back({"Idioma", langName(c.settings.language), [](UiContext& cc) {
+                    cc.settings.language = nextLang(cc.settings.language);
                     if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
                     return Nav::none();
                   }});

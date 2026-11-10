@@ -20,7 +20,9 @@ void Painter::begin() {
   display_.clear();
 }
 
-void Painter::text(int col, int row, std::string_view s) {
+void Painter::text(int col, int row, std::string_view s) { rawText(col, row, translate(lang_, s)); }
+
+void Painter::rawText(int col, int row, std::string_view s) {
   if (row < 0 || row >= kRows || col < 0 || col >= kCols) return;
   const std::string clipped = utf8Truncate(s, static_cast<size_t>(kCols - col));
   mix(clipped, col, row);
@@ -40,16 +42,16 @@ void Painter::title(std::string_view s) {
 // The selected row is a lit bar with dark text. The ">" marker stays in the text: it is what the tests and the
 // simulator read, and it still tells the selection when the bar is hard to see.
 void Painter::item(int row, std::string_view label, std::string_view value, bool selected) {
-  std::string line = std::string(selected ? ">" : " ") + " " + utf8Justify(label, value, kCols - 2);
+  std::string line = std::string(selected ? ">" : " ") + " " + utf8Justify(translate(lang_, label), translate(lang_, value), kCols - 2);
   if (selected && row >= 0 && row < kRows) {
     mix("sel", 0, row);
     display_.setDrawColor(true);
     display_.drawRect(0, row * kCellH, kCols * kCellW - 1, kCellH, true);  // 125 px: leaves the scrollbar columns free
     display_.setDrawColor(false);
-    text(0, row, line);
+    rawText(0, row, line);
     display_.setDrawColor(true);
   } else {
-    text(0, row, line);
+    rawText(0, row, line);
   }
 }
 
@@ -59,9 +61,10 @@ void Painter::footer(std::string_view s) {
 
 void Painter::footerCentered(std::string_view s) {
   if (footerLocked_) return;
-  const size_t len = utf8Length(s);
+  const std::string shown = translate(lang_, s);
+  const size_t len = utf8Length(shown);
   const int col = len >= static_cast<size_t>(kCols) ? 0 : static_cast<int>((static_cast<size_t>(kCols) - len) / 2);
-  text(col, kFooterRow, s);
+  rawText(col, kFooterRow, shown);
 }
 
 void Painter::scrollbar(size_t total, size_t first, size_t visible) {
@@ -79,7 +82,7 @@ void Painter::scrollbar(size_t total, size_t first, size_t visible) {
 }
 
 void Painter::keyCap(int x, int y, int w, std::string_view label, bool selected) {
-  const std::string clipped = utf8Truncate(label, static_cast<size_t>(std::max(1, w / kCellW)));
+  const std::string clipped = utf8Truncate(translate(lang_, label), static_cast<size_t>(std::max(1, w / kCellW)));
   const int textW = static_cast<int>(utf8Length(clipped)) * kCellW;
   const int tx = x + std::max(0, (w - textW) / 2);
   mix(clipped, x, y);
