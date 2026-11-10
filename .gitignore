@@ -6,3 +6,6 @@ build/
 __pycache__/
 *.pyc
 .claude/
+
+# installer log, local only
+aqtinstall.log
