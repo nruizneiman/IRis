@@ -6,6 +6,8 @@ using namespace iris;
 
 TEST_CASE("battery level: the anchor points of the generic curve map to their percentages") {
   CHECK(batteryPercentApprox(4200) == 100);
+  CHECK(batteryPercentApprox(4150) == 100);  // a full cell measured under load
+  CHECK(batteryPercentApprox(4075) == 95);
   CHECK(batteryPercentApprox(4000) == 90);
   CHECK(batteryPercentApprox(3700) == 60);
   CHECK(batteryPercentApprox(3600) == 50);

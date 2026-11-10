@@ -47,6 +47,7 @@ struct UiRig {
             info),
         ui(ctx, display, makeHomeScreen()) {
     ctx.files = &card;
+    ctx.sink = &card;
     info.firmware = "sim";
     info.displayController = "FakeDisplay";
     info.irLibrary = "simulado";

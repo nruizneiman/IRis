@@ -10,13 +10,18 @@ namespace iris {
 // (ufinebattery.com, "everything you should know about 18650 battery voltage"): 2.5 V = 0 %, 3.0 V = 10 %, 3.6 V = 50 %,
 // 3.7 V = 60 %, 4.0 V = 90 %, 4.2 V = 100 %. Not measured on this cell. The page does not say whether the figures are at
 // rest or under load, and under load the voltage reads lower, so the estimate tends to read low while the device runs.
+//
+// The top point is moved down to 4.15 V on purpose: a charger of this kind stops at 4.2 V, but the device measures the cell
+// while the boost converter draws from it (and through the protection circuit and the switch), so a full cell reads about
+// 4.1 to 4.15 V and would never show 100 % against 4.2 V. 4.15 V is an estimate of that drop, to be replaced by the voltage
+// really read on a full cell (Diagnostics page, then the multimeter on the cell).
 // The voltage at which the boost converter stops is not established yet (test B9), so a low percentage does not mean
 // the device still has that much time left.
 struct BatteryCurvePoint {
   uint16_t millivolts;
   uint8_t percent;
 };
-inline constexpr BatteryCurvePoint kBatteryCurve[] = {{2500, 0}, {3000, 10}, {3600, 50}, {3700, 60}, {4000, 90}, {4200, 100}};
+inline constexpr BatteryCurvePoint kBatteryCurve[] = {{2500, 0}, {3000, 10}, {3600, 50}, {3700, 60}, {4000, 90}, {4150, 100}};
 inline constexpr int kBatteryCurvePoints = static_cast<int>(sizeof kBatteryCurve / sizeof kBatteryCurve[0]);
 
 // Linear interpolation between the anchor points; clamped to 0..100.

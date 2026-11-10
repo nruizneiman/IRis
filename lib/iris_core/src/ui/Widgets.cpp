@@ -1,5 +1,6 @@
 #include "ui/Widgets.h"
 
+#include <algorithm>
 #include <cstdio>
 
 #include "ui/Icons.h"
@@ -69,7 +70,8 @@ void ListScreen::render(UiContext& c, Painter& p) {
 
 namespace {
 constexpr int kGridCols = 3;
-constexpr int kGridMaxItems = 6;
+constexpr int kGridPerPage = 6;     // 3 columns x 2 rows on screen; more icons make more pages
+constexpr int kGridMaxItems = 24;
 constexpr int kGridLeft = 4;       // the grid uses x = 4..123, the two right-most columns stay free
 constexpr int kGridCellW = 40;
 constexpr int kGridFirstY = 14;    // icon rows at y = 14 and y = 35 (16 px high, 3 px frame margin)
@@ -89,12 +91,22 @@ Nav IconGridScreen::onKey(UiContext& c, const KeyEvent& e) {
   const size_t n = items_.size();
   if (n == 0) return Nav::none();
   const bool move = e.action == KeyAction::Press || e.action == KeyAction::Repeat;
-  if (move && e.key == Key::Down) {
-    sel_ = (sel_ + kGridCols) % n;
-    return Nav::none();
-  }
-  if (move && e.key == Key::Up) {
-    sel_ = (sel_ + n - (static_cast<size_t>(kGridCols) % n)) % n;
+  if (move && (e.key == Key::Down || e.key == Key::Up)) {
+    // Down goes to the row below; from the last row of a page it continues on the next page (and wraps to the first).
+    const size_t perPage = static_cast<size_t>(kGridPerPage), cols = static_cast<size_t>(kGridCols);
+    const size_t page = sel_ / perPage, pos = sel_ % perPage, col = pos % cols, row = pos / cols;
+    const size_t pages = (n + perPage - 1) / perPage;
+    auto clampToPage = [&](size_t p, size_t r) {
+      size_t i = p * perPage + r * cols + col;
+      while (i >= n && i > p * perPage) --i;  // the last page may be short: land on its last icon of that row/column
+      return std::min(i, n - 1);
+    };
+    if (e.key == Key::Down) {
+      sel_ = row == 0 && page * perPage + cols < n ? clampToPage(page, 1) : clampToPage((page + 1) % pages, 0);
+    } else {
+      const size_t rowsHere = ((std::min(n, (page + 1) * perPage) - page * perPage) + cols - 1) / cols;
+      sel_ = row == 1 ? clampToPage(page, 0) : clampToPage((page + pages - 1) % pages, pages == 1 ? rowsHere - 1 : 1);
+    }
     return Nav::none();
   }
   if (isPress(e, Key::Right)) {
@@ -121,14 +133,19 @@ void IconGridScreen::render(UiContext& c, Painter& p) {
     const int segments = gaugeFn_(c);
     if (segments >= 0) p.batteryGauge(segments);
   }
-  for (size_t i = 0; i < items_.size(); ++i) {
-    const int col = static_cast<int>(i) % kGridCols, row = static_cast<int>(i) / kGridCols;
+  const size_t perPage = static_cast<size_t>(kGridPerPage);
+  const size_t page = sel_ / perPage;
+  for (size_t i = page * perPage; i < items_.size() && i < (page + 1) * perPage; ++i) {
+    const int pos = static_cast<int>(i % perPage);
+    const int col = pos % kGridCols, row = pos / kGridCols;
     const int x = kGridLeft + col * kGridCellW + (kGridCellW - icons::kSize) / 2;
     const int y = kGridFirstY + row * kGridRowStep;
     if (items_[i].icon) p.bitmap(x, y, icons::kSize, icons::kSize, items_[i].icon);
     if (i == sel_) p.frame(x - 3, y - 3, icons::kSize + 6, icons::kSize + 6);
   }
   if (!items_.empty()) p.footerCentered(items_[sel_].label);
+  const int pages = static_cast<int>((items_.size() + perPage - 1) / perPage);
+  if (pages > 1) p.pageDots(pages, static_cast<int>(page));
 }
 
 // ================= InfoScreen =================

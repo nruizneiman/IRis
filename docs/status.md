@@ -20,7 +20,8 @@ only as a fake; **Documented** = guide written, nothing executed. Nothing here h
 | Console simulator, fakes | Simulated | |
 | Wokwi | Prepared, unvalidated | Never opened |
 | Battery measurement (`IBatteryMonitor` for the divider) | Bench-checked at one point | 3.8 V on screen against 3.77 V on the multimeter (2026-11-03); other voltages not compared. The title bar shows an estimated level and bars (simulated, flashed on the panel pending) |
-| Second emitter channel, state-based (A/C) protocols, RAW editor on the device, library export | Pending | Listed in `docs/risks.md` |
+| Modes (loop, crazy, Be Gone, listening), controls from the card, folder import, export to SD | Simulated, not flashed | Scenario tests pass; see `docs/ui.md` (Modes and the card). Not tried on the device or with a real card yet |
+| Second emitter channel, state-based (A/C) protocols, RAW editor on the device | Pending | Listed in `docs/risks.md` |
 
 ## Tests
 
@@ -28,7 +29,7 @@ only as a fake; **Documented** = guide written, nothing executed. Nothing here h
 ./tools/test.ps1
 ```
 
-- `iris_unit_tests`: 147 cases.  `iris_ir_tests`: 10 cases (needs the library sources from one `pio run`).
+- `iris_unit_tests`: 212 cases.  `iris_ir_tests`: 10 cases (needs the library sources from one `pio run`).
 - Firmware: `esp32dev`, `esp32dev_ssd1306`, `display_probe`, `bench` all build.
 
 ## What the first hardware session should produce

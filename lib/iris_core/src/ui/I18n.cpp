@@ -87,7 +87,7 @@ constexpr CatalogEntry kCatalog[] = {
     {"Prueba de botones", "Button test"}, {"Izq largo: salir", "Hold Left: exit"},
     // settings
     {"Configuración", "Settings"}, {"Invertir video", "Invert video"}, {"Espera captura", "Capture wait"},
-    {"Info del equipo", "Device info"}, {"Almacenamiento", "Storage"}, {"Idioma", "Language"},
+    {"SD en Controles", "SD in Remotes"}, {"Info del equipo", "Device info"}, {"Almacenamiento", "Storage"}, {"Idioma", "Language"},
     {"¡FLASH NO MONTADA!", "FLASH NOT MOUNTED!"}, {"OK:borrar/formatear", "OK:erase/format"},
     {"¿FORMATEAR FLASH?", "FORMAT FLASH?"}, {"La flash no se pudo leer.", "Flash could not be read."},
     {"Formatear borra todo", "Formatting erases all"}, {"lo guardado en ella.", "data stored in it."},
@@ -101,12 +101,29 @@ constexpr CatalogEntry kCatalog[] = {
     {"No se pudo leer", "Could not read"}, {"OK:importar Izq:atrás", "OK:import Left:back"},
     {"Nada para importar", "Nothing to import"}, {"Importar IRDB", "Import IRDB"},
     {"Sin carpeta /irdb", "No /irdb folder"}, {"(lista incompleta)", "(list incomplete)"},
-    {"(carpeta vacía)", "(empty folder)"}, {"Crear control", "Create remote"},
+    {"(carpeta vacía)", "(empty folder)"}, {"» Importar carpeta", "» Import folder"},
+    {"» Usar esta carpeta", "» Use this folder"}, {"Crear control", "Create remote"},
     // widgets
     {"OK:Sí  Izq:No", "OK:Yes  Left:No"}, {"Esp.", "Spc"}, {"Borrar", "Del"}, {"Listo", "Done"},
     {"Izq largo:cancelar", "Hold Left:cancel"}, {"Nombre muy largo", "Name too long"},
     {"Escribir otro...", "Type another..."}, {"OK:elegir Izq:atrás", "OK:select Left:back"},
     {"Izq/Der:dígito OK:ok", "Left/Right:digit OK:ok"}, {"Izq:atrás", "Left:back"}, {"OK:cambiar Izq:atrás", "OK:change Left:back"},
+    // modes: loop, crazy, Be Gone, listening, SD controls
+    {"Guardados", "Saved"}, {"Tarjeta SD", "SD card"}, {"Modo loop", "Loop mode"}, {"Modo loco", "Crazy mode"},
+    {"Escuchar", "Listen"}, {"Escuchando", "Listening"}, {"Escuchar de nuevo", "Listen again"}, {"Control SD", "SD remote"},
+    {"Elija botones", "Pick buttons"}, {"Marque al menos uno", "Mark at least one"},
+    {"con OK en la lista.", "with OK in the list."}, {"Iniciar", "Start"}, {"Pausa", "Pause"},
+    {"OK:marcar Izq:atrás", "OK:mark Left:back"}, {"Pausa media", "Average pause"},
+    {"Botones al azar,", "Random buttons,"}, {"a veces repetidos.", "sometimes repeated."}, {"Acción", "Action"},
+    {"Elegir categoría", "Choose category"}, {"Be Gone: categoría", "Be Gone: category"},
+    {"Be Gone: carpeta", "Be Gone: folder"}, {"¿Iniciar Be Gone?", "Start Be Gone?"},
+    {"Envía muchos códigos.", "Sends many codes."}, {"Loop: control", "Loop: remote"}, {"Loco: control", "Crazy: remote"},
+    {"Terminado", "Finished"}, {"OK:repetir Izq:salir", "OK:repeat Left:exit"},
+    {"Pulse botones de un", "Press buttons of a"}, {"control hacia el", "remote toward the"}, {"receptor.", "receiver."},
+    {"OK:detener Izq:salir", "OK:stop Left:exit"}, {"OK:ver Der:menú", "OK:view Right:menu"},
+    {"Memoria llena", "Memory full"}, {"Detalle", "Details"}, {"Eliminar", "Delete"}, {"Sin lugar", "No room"},
+    {"Importar carpeta", "Import folder"}, {"Exportar a SD", "Export to SD"}, {"Exportar todo a SD", "Export all to SD"},
+    {"Sin nada que exportar", "Nothing to export"}, {"No se pudo escribir", "Could not write"},
     // errors shown as messages
     {"Dato inválido", "Invalid data"}, {"Valor fuera de rango", "Value out of range"},
     {"Límite alcanzado", "Limit reached"}, {"No encontrado", "Not found"}, {"Ya existe ese nombre", "Name already exists"},
@@ -125,7 +142,9 @@ constexpr CatalogEntry kPrefixes[] = {
     {"Categorías: ", "Categories: "}, {"Controles: ", "Remotes: "}, {"Botones: ", "Buttons: "},
     {"Con señal: ", "With signal: "}, {"Sin soporte: ", "Unsupported: "}, {"Inválidos: ", "Invalid: "},
     {"Sin lugar: ", "No room: "}, {"Rango ", "Range "},         {"y sus ", "and its "},
-    {"Vista previa: ", "Preview: "},
+    {"Vista previa: ", "Preview: "},  {"Archivos: ", "Files: "},    {"Importados: ", "Imported: "},
+    {"Omitidos: ", "Skipped: "},     {"Capturas: ", "Captures: "}, {"Loco: ", "Crazy: "},
+    {"Exportados: ", "Exported: "}, {"Apagar: ", "Power off: "},     {"Encender: ", "Power on: "},
 };
 
 // Text that ends a string ("3 botones"): the head is looked up as a whole string.

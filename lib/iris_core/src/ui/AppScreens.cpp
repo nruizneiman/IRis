@@ -6,12 +6,16 @@
 #include <memory>
 
 #include "app/BatteryLevel.h"
+#include "app/LibraryExport.h"
+#include "app/RemoteView.h"
 #include "app/SignalBuilder.h"
 #include "domain/Limits.h"
 #include "domain/Naming.h"
 #include "domain/SignalValidation.h"
 #include "import/FlipperIr.h"
 #include "ui/I18n.h"
+#include "ui/ModuleScreens.h"
+#include "ui/ScreenKit.h"
 #include "ui/Icons.h"
 #include "ui/Utf8.h"
 #include "ui/Widgets.h"
@@ -115,6 +119,19 @@ void sendButton(UiContext& c, Id remote, Id button) {
   if (!b) return c.toast("Botón no encontrado");
   if (!b->signal) return c.toast("Sin señal guardada");
   sendSignal(c, *b->signal);
+}
+
+// Writes controls to the card with `doExport` and says how it went. Nothing is written unless the user asked for it.
+void runExport(UiContext& c, const std::function<Status(IFileSink&, ExportSummary&)>& doExport) {
+  if (!c.sink || !c.sink->writable()) return c.toast("Sin tarjeta SD");
+  ExportSummary summary;
+  const Status st = doExport(*c.sink, summary);
+  if (summary.skippedButtons > 0) {
+    c.log.log(LogLevel::Info, "export", numStr(summary.skippedButtons) + " buttons not written (empty or unsupported)");
+  }
+  if (!st.ok()) return c.toast(st.code == Err::Unavailable ? "Sin tarjeta SD" : "No se pudo escribir", 3000);
+  if (summary.remotes == 0) return c.toast("Sin nada que exportar");
+  c.toast("Exportados: " + numStr(summary.remotes));
 }
 
 IrSignal rawReplay(const IrSignal& captured) {
@@ -480,6 +497,12 @@ P makeRemoteMenu(Id remote) {
                           return ok && copy.ok() ? Nav::pop(2) : Nav::none();
                         }));
                   }});
+    it.push_back({"Exportar a SD", "", [remote](UiContext& c) {
+                    runExport(c, [&](IFileSink& sink, ExportSummary& s) { return exportRemote(sink, c.library, remote, s); });
+                    return Nav::none();
+                  }});
+    it.push_back({"Modo loop", "", [remote](UiContext&) { return Nav::push(makeLoopSetup(RemoteRef{remote, ""})); }});
+    it.push_back({"Modo loco", "", [remote](UiContext&) { return Nav::push(makeCrazySetup(RemoteRef{remote, ""})); }});
     it.push_back({"Eliminar control", "", [remote](UiContext& c) {
                     const Remote* r = c.library.findRemote(remote);
                     return Nav::push(std::make_unique<ConfirmScreen>(
@@ -544,6 +567,10 @@ P makeCategoryMenu(Id cat) {
                           return finishChange(c2, st, "Renombrada") ? Nav::pop(2) : Nav::none();
                         }));
                   }});
+    it.push_back({"Exportar a SD", "", [cat](UiContext& c) {
+                    runExport(c, [&](IFileSink& sink, ExportSummary& s) { return exportCategory(sink, c.library, cat, s); });
+                    return Nav::none();
+                  }});
     it.push_back({"Eliminar categoría", "", [cat](UiContext& c) {
                     const Category* cc = c.library.findCategory(cat);
                     return Nav::push(std::make_unique<ConfirmScreen>(
@@ -605,6 +632,7 @@ P makeLibraryScreen() {
       const Id id = cat.id;
       it.push_back({cat.name, numStr(n), [id](UiContext&) { return Nav::push(makeCategoryScreen(id)); }});
     }
+    for (ListItem& card : cardLibraryItems(c)) it.push_back(std::move(card));  // the card's folders, marked "SD"
     it.push_back({"+ Nueva categoría", "", [](UiContext&) {
                     return Nav::push(withPresets(std::make_unique<TextInputScreen>(
                         "Nueva categoría", "", limits::kMaxNameBytes, [](UiContext& c2, const std::string& name) {
@@ -929,6 +957,10 @@ P makeToolsScreen() {
                     list->emptyText("Sin capturas aún");
                     return Nav::push(std::move(list));
                   }});
+    it.push_back({"Exportar todo a SD", "", [](UiContext& c) {
+                    runExport(c, [&](IFileSink& sink, ExportSummary& s) { return exportAll(sink, c.library, s); });
+                    return Nav::none();
+                  }});
     it.push_back({"Diagnóstico HW", "", [](UiContext&) { return Nav::push(makeDiagnosticsScreen()); }});
     it.push_back({"Exploración", "", [](UiContext&) { return Nav::push(makeExplorationForm()); }});
     it.push_back({"Registro de eventos", "", [](UiContext&) { return Nav::push(makeEventLogScreen()); }});
@@ -984,6 +1016,11 @@ P makeSettingsScreen() {
     // The language name is always shown in its own language, so it can be found whatever the current one is.
     it.push_back({"Idioma", langName(c.settings.language), [](UiContext& cc) {
                     cc.settings.language = nextLang(cc.settings.language);
+                    if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
+                    return Nav::none();
+                  }});
+    it.push_back({"SD en Controles", c.settings.cardInLibrary ? "SÍ" : "NO", [](UiContext& cc) {
+                    cc.settings.cardInLibrary = !cc.settings.cardInLibrary;
                     if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
                     return Nav::none();
                   }});
@@ -1046,19 +1083,7 @@ P makeSettingsScreen() {
 // ---------------------------------------------------------------- import from the SD card (Flipper-IRDB)
 
 constexpr size_t kImportListMax = 300;          // entries shown per folder
-constexpr size_t kImportMaxFileBytes = 65536;   // the same limit the upload tool enforces
 constexpr const char* kImportRoot = "/irdb";
-
-bool endsWithIr(const std::string& n) { return n.size() > 3 && n.compare(n.size() - 3, 3, ".ir") == 0; }
-
-std::string remoteNameFromFile(const std::string& file) {
-  std::string n = file;
-  if (endsWithIr(n)) n.resize(n.size() - 3);
-  for (char& ch : n) {
-    if (ch == '_') ch = ' ';
-  }
-  return trimName(utf8Truncate(n, limits::kMaxNameBytes));
-}
 
 // `base`, or `base 2`, `base 3`... when `taken` already holds it (always within the name length limit).
 std::string uniqueName(const std::vector<std::string>& taken, const std::string& base) {
@@ -1093,7 +1118,7 @@ void parseOnce(UiContext& c, ImportState& st) {
     st.status = Status::fail(Err::Unavailable, "no card");
     return;
   }
-  auto text = c.files->readText(st.path, kImportMaxFileBytes);
+  auto text = c.files->readText(st.path, limits::kMaxCardFileBytes);
   if (!text.ok()) {
     st.status = text.status();
     return;
@@ -1147,6 +1172,52 @@ P makeImportCategoryPicker(std::shared_ptr<ImportState> st) {
   return list;
 }
 
+// Creates a saved control from a view; names are made unique. Nothing is saved to flash here.
+Result<Id> importViewQuiet(UiContext& c, const RemoteView& view, Id cat) {
+  std::vector<std::string> names;
+  std::vector<std::pair<std::string, IrSignal>> buttons;
+  for (const ViewButton& b : view.buttons) {
+    if (!b.signal) continue;
+    const std::string n = uniqueName(names, b.name);
+    names.push_back(n);
+    buttons.emplace_back(n, *b.signal);
+  }
+  std::vector<std::string> remoteNames;
+  for (const Remote& r : c.library.data().remotes) remoteNames.push_back(r.name);
+  const std::string name = uniqueName(remoteNames, view.name);
+  return c.library.importRemote(name, cat, buttons);
+}
+
+// Same as doImport, for a control already read into a RemoteView (a card control opened from the Controles list).
+Nav importViewNav(UiContext& c, const RemoteView& view, Id cat, bool removeCategoryOnFailure) {
+  auto r = importViewQuiet(c, view, cat);
+  if (!r.ok() && removeCategoryOnFailure) c.library.removeCategory(cat);
+  if (!finishChange(c, r.ok() ? Status::success() : r.status(), "Control importado")) return Nav::none();
+  return Nav::homeThen(makeRemoteScreen(r.value()));
+}
+
+P makeImportViewPicker(std::shared_ptr<RemoteView> view) {
+  return std::make_unique<ListScreen>("import-category", "Guardar en...", [view](UiContext& c) {
+    std::vector<ListItem> it;
+    for (const Category& cat : c.library.data().categories) {
+      const Id cid = cat.id;
+      it.push_back({cat.name, "", [view, cid](UiContext& c2) { return importViewNav(c2, *view, cid, false); }});
+    }
+    it.push_back({"+ Nueva categoría", "", [view](UiContext&) {
+                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
+                        "Nueva categoría", "", limits::kMaxNameBytes, [view](UiContext& c2, const std::string& catName) {
+                          auto cat = c2.library.addCategory(catName);
+                          if (!cat.ok()) {
+                            c2.toast(spanishError(cat.status()));
+                            return Nav::none();
+                          }
+                          return importViewNav(c2, *view, cat.value(), true);
+                        }), categoryPresets()));
+                  }});
+    return it;
+  });
+}
+
 P makeImportPreview(const std::string& dir, const std::string& file) {
   auto st = std::make_shared<ImportState>();
   st->path = dir + "/" + file;
@@ -1183,49 +1254,15 @@ P makeImportPreview(const std::string& dir, const std::string& file) {
 }
 
 P makeImportBrowser(const std::string& dir) {
-  auto list = std::make_unique<ListScreen>("import-browser", "Importar IRDB", [dir](UiContext& c) {
-    std::vector<ListItem> it;
-    if (!c.files || !c.files->available()) {
-      it.push_back({"Sin tarjeta SD", "", nullptr});
-      return it;
-    }
-    auto r = c.files->list(dir, kImportListMax + 1);
-    if (!r.ok()) {
-      it.push_back({dir == kImportRoot ? "Sin carpeta /irdb" : "No se pudo leer", "", nullptr});
-      return it;
-    }
-    std::vector<FileEntry> entries;
-    for (FileEntry& e : r.value()) {
-      if (e.name.empty() || e.name[0] == '.') continue;
-      if (e.isDir || endsWithIr(e.name)) entries.push_back(std::move(e));
-    }
-    const bool cut = entries.size() > kImportListMax;
-    if (cut) entries.resize(kImportListMax);
-    std::sort(entries.begin(), entries.end(), [](const FileEntry& a, const FileEntry& b) {
-      if (a.isDir != b.isDir) return a.isDir;  // folders first
-      std::string x = a.name, y = b.name;
-      for (char& ch : x) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-      for (char& ch : y) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-      return x < y;
-    });
-    for (const FileEntry& e : entries) {
-      const std::string name = e.name;
-      if (e.isDir) {
-        it.push_back({name + "/", "", [dir, name](UiContext&) { return Nav::push(makeImportBrowser(dir + "/" + name)); }});
-      } else {
-        it.push_back({name.substr(0, name.size() - 3), "", [dir, name](UiContext&) { return Nav::push(makeImportPreview(dir, name)); }});
-      }
-    }
-    if (cut) it.push_back({"(lista incompleta)", "", nullptr});
-    return it;
-  });
-  list->titleFn([dir](UiContext&) {
-    if (dir == kImportRoot) return std::string("Importar IRDB");
-    const size_t slash = dir.rfind('/');
-    return slash == std::string::npos ? dir : dir.substr(slash + 1);
-  });
-  list->emptyText("(carpeta vacía)");
-  return list;
+  CardBrowserOptions o;
+  o.id = "import-browser";
+  o.rootTitle = "Importar IRDB";
+  o.root = kImportRoot;
+  o.dir = dir;
+  o.onFile = [](UiContext&, const std::string& d, const std::string& file) { return Nav::push(makeImportPreview(d, file)); };
+  o.onFolder = [](UiContext&, const std::string& d) { return Nav::push(makeImportFolderPicker(d)); };
+  o.folderLabel = "» Importar carpeta";
+  return makeCardBrowser(std::move(o));
 }
 
 // ---------------------------------------------------------------- home
@@ -1236,8 +1273,10 @@ P buildHome() {
     it.push_back({"Controles", icons::kRemote.data(), [](UiContext&) { return Nav::push(makeLibraryScreen()); }});
     it.push_back({"Aprender señal", icons::kLearn.data(), [](UiContext&) { return Nav::push(makeLearnTargetPicker()); }});
     it.push_back({"Crear control", icons::kCreate.data(), [](UiContext&) { return Nav::push(makeCreateRemote()); }});
-    it.push_back({"Herramientas IR", icons::kTools.data(), [](UiContext&) { return Nav::push(makeToolsScreen()); }});
-    it.push_back({"Configuración", icons::kSettings.data(), [](UiContext&) { return Nav::push(makeSettingsScreen()); }});
+    it.push_back({"Be Gone", icons::kBeGone.data(), [](UiContext&) { return Nav::push(makeBeGoneMode()); }});
+    it.push_back({"Modo loco", icons::kCrazy.data(), [](UiContext&) { return Nav::push(makeCrazyMode()); }});
+    it.push_back({"Modo loop", icons::kLoop.data(), [](UiContext&) { return Nav::push(makeLoopMode()); }});
+    it.push_back({"Escuchar", icons::kListen.data(), [](UiContext&) { return Nav::push(makeListenMode()); }});
     it.push_back({"Importar", icons::kImport.data(), [](UiContext& c) {
                     if (!c.files || !c.files->available()) {
                       c.toast("Sin tarjeta SD");
@@ -1245,6 +1284,8 @@ P buildHome() {
                     }
                     return Nav::push(makeImportBrowser(kImportRoot));
                   }});
+    it.push_back({"Herramientas IR", icons::kTools.data(), [](UiContext&) { return Nav::push(makeToolsScreen()); }});
+    it.push_back({"Configuración", icons::kSettings.data(), [](UiContext&) { return Nav::push(makeSettingsScreen()); }});
     return it;
   });
   // Without a reading: "Bat n/d". With one: an estimated percentage ("~57%") and the bars; the exact voltage is on the
@@ -1262,6 +1303,29 @@ P buildHome() {
 }
 
 }  // namespace
+
+namespace kit {
+
+std::string numStr(unsigned long long v) { return ::iris::numStr(v); }
+std::string shortSignal(const IrSignal& s) { return ::iris::shortSignal(s); }
+std::vector<std::string> signalLines(const IrSignal& s) { return ::iris::signalLines(s); }
+bool finishChange(UiContext& c, const Status& st, const std::string& okMsg) { return ::iris::finishChange(c, st, okMsg); }
+void sendSignal(UiContext& c, const IrSignal& s) { ::iris::sendSignal(c, s); }
+IrSignal rawReplay(const IrSignal& captured) { return ::iris::rawReplay(captured); }
+std::unique_ptr<Screen> makeRemotePicker(const std::string& title, PickFn onPick) { return ::iris::makeRemotePicker(title, std::move(onPick)); }
+std::unique_ptr<Screen> makeRemoteScreen(Id remote) { return ::iris::makeRemoteScreen(remote); }
+std::unique_ptr<Screen> makeCaptureDetail(const CaptureRecord& rec) { return ::iris::makeCaptureDetail(rec); }
+std::vector<std::string> categoryPresets() { return ::iris::categoryPresets(); }
+std::unique_ptr<TextInputScreen> withPresets(std::unique_ptr<TextInputScreen> screen, std::vector<std::string> list) {
+  return ::iris::withPresets(std::move(screen), std::move(list));
+}
+Result<Id> importViewQuiet(UiContext& c, const RemoteView& view, Id category) { return ::iris::importViewQuiet(c, view, category); }
+Nav importView(UiContext& c, const RemoteView& view, Id category, bool removeCategoryOnFailure) {
+  return ::iris::importViewNav(c, view, category, removeCategoryOnFailure);
+}
+std::unique_ptr<Screen> makeImportViewCategoryPicker(std::shared_ptr<RemoteView> view) { return ::iris::makeImportViewPicker(std::move(view)); }
+
+}  // namespace kit
 
 std::unique_ptr<Screen> makeHomeScreen() { return buildHome(); }
 

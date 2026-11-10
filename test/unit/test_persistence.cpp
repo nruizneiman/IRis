@@ -447,5 +447,5 @@ TEST_CASE("an index with the maximum number of remotes and categories is small")
   for (Id i = 1; i <= limits::kMaxRemotes; ++i) {
     idx.remotes.push_back({100 + i, std::string(limits::kMaxNameBytes, 'r'), 1, "r999999g999999.irs", 0xFFFFFFFFu});
   }
-  CHECK(serializeIndex(idx).value().size() <= 6 * 1024);
+  CHECK(serializeIndex(idx).value().size() <= 8 * 1024);
 }

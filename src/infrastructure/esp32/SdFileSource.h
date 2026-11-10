@@ -8,12 +8,13 @@
 #include <vector>
 
 #include "board_pins.h"
+#include "hardware/IFileSink.h"
 #include "hardware/IFileSource.h"
 
-// Read-only access to the microSD module (SPI on its own pin set, see board_pins.h). The card is mounted on first use
-// and, when there is none, retried at most every few seconds so an absent card never slows the UI down. Nothing is ever
-// written here: the files are copied to the card with tools/irdb_upload.py (bench firmware) or on a PC.
-class SdFileSource : public iris::IFileSource {
+// The microSD module (SPI on its own pin set, see board_pins.h). The card is mounted on first use and, when there is
+// none, retried at most every few seconds so an absent card never slows the UI down. Reading serves the IRDB files
+// (copied with tools/irdb_upload.py or on a PC); writing happens only when the user exports from the menus.
+class SdFileSource : public iris::IFileSource, public iris::IFileSink {
  public:
   bool available() override {
     if (mounted_) return true;
@@ -24,6 +25,30 @@ class SdFileSource : public iris::IFileSource {
     spi_.begin(board::kSdSck, board::kSdMiso, board::kSdMosi, board::kSdCs);
     mounted_ = SD.begin(board::kSdCs, spi_, 4000000);
     return mounted_;
+  }
+
+  bool writable() override { return available(); }
+
+  // Writes to "<path>.tmp" and renames it over the target, so a card pulled half-way never leaves a broken file.
+  iris::Status writeText(const std::string& path, const std::string& text) override {
+    if (!available()) return iris::Status::fail(iris::Err::Unavailable, "no card");
+    for (size_t slash = path.find('/', 1); slash != std::string::npos; slash = path.find('/', slash + 1)) {
+      const std::string dir = path.substr(0, slash);
+      if (!SD.exists(dir.c_str()) && !SD.mkdir(dir.c_str())) return iris::Status::fail(iris::Err::StorageFailure, "mkdir failed");
+    }
+    const std::string tmp = path + ".tmp";
+    SD.remove(tmp.c_str());
+    File f = SD.open(tmp.c_str(), FILE_WRITE);
+    if (!f) return iris::Status::fail(iris::Err::StorageFailure, "cannot create the file");
+    const size_t wrote = f.write(reinterpret_cast<const uint8_t*>(text.data()), text.size());
+    f.close();
+    if (wrote != text.size()) {
+      SD.remove(tmp.c_str());
+      return iris::Status::fail(iris::Err::StorageFailure, "short write");
+    }
+    if (SD.exists(path.c_str())) SD.remove(path.c_str());
+    if (!SD.rename(tmp.c_str(), path.c_str())) return iris::Status::fail(iris::Err::StorageFailure, "rename failed");
+    return iris::Status::success();
   }
 
   iris::Result<std::vector<iris::FileEntry>> list(const std::string& dir, size_t maxEntries) override {

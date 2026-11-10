@@ -93,3 +93,42 @@ is shown as written). Consequence: names the user typed or imported are never tr
 catalog entry (for example a category called "Controles") is shown translated. The scripted tests run in Spanish
 (`UiRig`), and `test_language.cpp` walks the main screens in English and fails if Spanish text is left on them. A new
 screen needs its strings added to the catalog.
+
+
+## Modes and the card (2026-11)
+
+The home screen is an icon grid of ten entries over two pages (six per page, one dot per page in the bottom-right corner;
+Up/Down go from the last row of a page to the next, Left/Right walk through all of them): Controles, Aprender señal, Crear
+control, Be Gone, Modo loco, Modo loop, Escuchar, Importar, Herramientas IR, Configuración.
+
+**Controls from the card, alone or with the saved ones.** A card control is read from its `.ir` file when it is opened and
+never stored (`app/RemoteView.h`: a saved control and a card control are both a `RemoteView`, and the modes only see that).
+- *Controles* lists the saved categories and, marked `SD`, the card's top-level folders (setting *SD en Controles*, on by
+  default; it disappears with no card). A card control opens read-only: OK sends a button, Right opens a menu (Import, Loop,
+  Crazy).
+- *Importar* keeps working as before, and now also has `» Importar carpeta` inside each folder: every `.ir` file directly in
+  it becomes a saved control, in a new category named after the folder or an existing one, a file per tick so Left can stop it.
+- Every mode asks "Guardados / Tarjeta SD" first, so saved and card controls can be used in any of them.
+
+**Modes** (all send through `TransmitService`, so the emitter limits apply; none sends before its screen is opened and the
+user chooses to start; Left stops, leaving the screen stops, and the pause between sends is never below 100 ms):
+- *Modo loop*: mark the buttons (the mark shows the order), choose the pause (0.2 s to 60 s), start; the sequence repeats until
+  stopped.
+- *Modo loco*: random buttons of one control, sometimes the same one two or three times in a row; the pause varies between
+  0.5x and 1.5x the chosen one.
+- *Be Gone*: choose Apagar or Encender, then a saved category or a card folder (subfolders included), confirm, and it sends the
+  power button of each control (an explicit off / on button when there is one, else the toggle). A code already sent in the run
+  is not sent twice, which keeps a run over a whole IRDB folder short. The emitter gives no feedback, so it cannot say which
+  code worked.
+- *Escuchar*: keeps the receiver armed, restarting it after every capture, until OK stops it (up to 40 captures / 16000 RAW
+  entries); then a list where each capture can be replayed, saved into a button of a saved control, inspected or deleted. A
+  burst that arrives in the instant between one capture and the next arming can be missed.
+
+**Limits.** A saved control holds up to 256 buttons (it was 40), the library 64 controls and 1200 buttons in total (they live
+in RAM); a card control up to 512 buttons, from a file of at most 64 KB. These are RAM budgets, not a promise of "unlimited".
+
+**Export.** *Herramientas IR > Exportar todo a SD*, and *Exportar a SD* in the menu of a control or a category, write Flipper `.ir`
+files to `/iris/export/<category>/<control>.ir` (`import/FlipperIrWriter.h`, the mirror of the importer: NEC / NECext,
+Samsung32, SIRC / SIRC15 / SIRC20 and raw; other decoded protocols and empty buttons are counted and left out). Names keep
+ASCII only (any other character becomes `_`). A file is written under a temporary name and renamed. Re-importing them goes
+through the same card browser once the folder is copied under `/irdb`.

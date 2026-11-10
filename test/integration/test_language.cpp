@@ -4,6 +4,7 @@
 #include <string>
 
 #include "app/Settings.h"
+#include "app/SignalBuilder.h"
 #include "persistence/Crc32.h"
 #include "ui/I18n.h"
 #include "ui_helpers.h"
@@ -12,7 +13,9 @@ using namespace uihelp;
 
 // Spanish markers that must not be on screen when English is selected: accented letters and the common Spanish words
 // of the interface. A name the user typed is not checked (these screens hold none).
-static bool looksSpanish(const std::string& line) {
+static bool looksSpanish(std::string line) {
+  const std::string marker = "\xC2\xBB";  // "»" marks a row, it is not Spanish
+  for (size_t at; (at = line.find(marker)) != std::string::npos;) line.erase(at, marker.size());
   for (unsigned char ch : line) {
     if (ch >= 0x80) return true;  // an accented letter, "¿" or "¡"
   }
@@ -173,4 +176,69 @@ TEST_CASE("language: library, menus, learn, import and exploration screens read 
 
   REQUIRE(open(r, "Importar"));
   requireEnglish(r, "import browser");
+}
+
+TEST_CASE("language: the mode screens read English with no Spanish left") {
+  UiRig r;
+  r.settings.language = Lang::En;
+  const Ids ids = seed(r);
+  REQUIRE(r.library.setButtonSignal(ids.remote, ids.button, buildDecodedSignal(Protocol::Nec, 1, 2, 32).value()).ok());
+  r.card.add("/irdb/TVs/LG/LG_TV.ir", "Filetype: IR signals file\nVersion: 1\n#\nname: Power\ntype: parsed\nprotocol: NEC\naddress: 04 00 00 00\ncommand: 08 00 00 00\n");
+  requireEnglish(r, "home page 1");
+  r.press(Key::Down);
+  r.press(Key::Down);
+  requireEnglish(r, "home page 2");
+
+  r.longPress(Key::Left);
+  REQUIRE(open(r, "Be Gone"));
+  requireEnglish(r, "begone form");
+  REQUIRE(select(r, "Elegir categoría"));
+  r.press(Key::Ok);
+  requireEnglish(r, "begone source");
+  REQUIRE(open(r, "TV"));
+  requireEnglish(r, "begone confirm");
+  r.press(Key::Ok);
+  requireEnglish(r, "begone run");
+  r.longPress(Key::Left);
+
+  REQUIRE(open(r, "Modo loop"));
+  requireEnglish(r, "loop source");
+  REQUIRE(open(r, "Guardados"));
+  REQUIRE(open(r, "Sala"));
+  requireEnglish(r, "loop setup");
+  r.longPress(Key::Left);
+
+  REQUIRE(open(r, "Modo loco"));
+  REQUIRE(open(r, "Tarjeta SD"));
+  requireEnglish(r, "crazy card browser");
+  REQUIRE(open(r, "TVs/"));
+  REQUIRE(open(r, "LG/"));
+  REQUIRE(open(r, "LG_TV"));
+  requireEnglish(r, "crazy setup");
+  REQUIRE(select(r, "Iniciar"));
+  r.press(Key::Ok);
+  requireEnglish(r, "crazy run");
+  r.longPress(Key::Left);
+
+  REQUIRE(open(r, "Escuchar"));
+  requireEnglish(r, "listening");
+  r.press(Key::Ok);
+  requireEnglish(r, "listen review");
+  r.longPress(Key::Left);
+
+  REQUIRE(open(r, "Controles"));
+  requireEnglish(r, "remotes with the card");
+  REQUIRE(open(r, "TVs/"));
+  REQUIRE(open(r, "LG/"));
+  REQUIRE(open(r, "LG_TV"));
+  requireEnglish(r, "card remote");
+  r.press(Key::Right);
+  requireEnglish(r, "card remote menu");
+  r.longPress(Key::Left);
+
+  REQUIRE(open(r, "Importar"));
+  REQUIRE(open(r, "TVs/"));
+  REQUIRE(open(r, "LG/"));
+  REQUIRE(open(r, "» Importar carpeta"));
+  requireEnglish(r, "import folder target");
 }

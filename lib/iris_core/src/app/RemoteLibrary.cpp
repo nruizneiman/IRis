@@ -46,8 +46,9 @@ Status validateLibraryData(const LibraryData& d) {
     if (nameTaken(d.categories, c.name, c.id)) return Status::fail(Err::Corrupt, "duplicate category name");
   }
 
-  size_t totalRaw = 0;
+  size_t totalRaw = 0, totalButtons = 0;
   for (const Remote& r : d.remotes) {
+    totalButtons += r.buttons.size();
     if (!claim(r.id)) return Status::fail(Err::Corrupt, "bad or duplicate remote id");
     Status st = validateName(r.name);
     if (!st.ok()) return Status::fail(Err::Corrupt, "remote: " + st.message);
@@ -72,6 +73,7 @@ Status validateLibraryData(const LibraryData& d) {
     if (remoteRaw > limits::kMaxRawEntriesPerRemote) return Status::fail(Err::LimitReached, "remote raw data too large");
   }
   if (totalRaw > limits::kMaxTotalRawEntries) return Status::fail(Err::LimitReached, "library raw data too large");
+  if (totalButtons > limits::kMaxTotalButtons) return Status::fail(Err::LimitReached, "too many buttons in the library");
   return Status::success();
 }
 
@@ -235,6 +237,9 @@ Result<Id> RemoteLibrary::duplicateRemote(Id sourceId, const std::string& rawNam
   if (totalRawEntries() + srcRaw > limits::kMaxTotalRawEntries) {
     return Status::fail(Err::LimitReached, "raw storage budget exceeded");
   }
+  if (totalButtons() + src->buttons.size() > limits::kMaxTotalButtons) {
+    return Status::fail(Err::LimitReached, "button limit reached");
+  }
   if (data_.nextId > std::numeric_limits<Id>::max() - static_cast<Id>(src->buttons.size()) - 2) {
     return Status::fail(Err::LimitReached, "id space exhausted");
   }
@@ -248,6 +253,12 @@ Result<Id> RemoteLibrary::duplicateRemote(Id sourceId, const std::string& rawNam
   return newId;
 }
 
+size_t RemoteLibrary::totalButtons() const {
+  size_t n = 0;
+  for (const Remote& r : data_.remotes) n += r.buttons.size();
+  return n;
+}
+
 // ---- buttons ----
 
 Result<Id> RemoteLibrary::addButton(Id remoteId, const std::string& rawName) {
@@ -256,7 +267,9 @@ Result<Id> RemoteLibrary::addButton(Id remoteId, const std::string& rawName) {
   std::string name;
   Status st = checkName(rawName, name);
   if (!st.ok()) return st;
-  if (r->buttons.size() >= limits::kMaxButtonsPerRemote) return Status::fail(Err::LimitReached, "button limit reached");
+  if (r->buttons.size() >= limits::kMaxButtonsPerRemote || totalButtons() >= limits::kMaxTotalButtons) {
+    return Status::fail(Err::LimitReached, "button limit reached");
+  }
   if (nameTaken(r->buttons, name, 0)) return Status::fail(Err::AlreadyExists, "button name already used");
   Result<Id> id = allocateId();
   if (!id.ok()) return id;

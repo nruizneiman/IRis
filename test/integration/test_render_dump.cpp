@@ -24,6 +24,12 @@ TEST_CASE("render dump (only when IRIS_DUMP_DIR is set)") {
   r.battery.set(3770);
   r.advance(300);
   dump(r, dir, "home_battery");
+  r.press(Key::Down);
+  dump(r, dir, "home_page1_row2");
+  r.press(Key::Down);
+  dump(r, dir, "home_page2");
+  r.press(Key::Down);
+  r.press(Key::Down);  // back on the first page, first icon
   r.battery.set(std::nullopt);
   r.advance(300);
   r.press(Key::Right);

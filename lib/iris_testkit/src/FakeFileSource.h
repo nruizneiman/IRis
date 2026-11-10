@@ -4,16 +4,35 @@
 #include <set>
 #include <string>
 
+#include "hardware/IFileSink.h"
 #include "hardware/IFileSource.h"
 
 namespace iris::testkit {
 
 // In-memory card: paths map to contents; folders exist implicitly.
-class FakeFileSource : public IFileSource {
+class FakeFileSource : public IFileSource, public IFileSink {
  public:
   bool available() override { return present_; }
   void setPresent(bool p) { present_ = p; }
   void add(const std::string& path, const std::string& content) { files_[path] = content; }
+
+  // IFileSink
+  bool writable() override { return present_ && !readOnly_; }
+  Status writeText(const std::string& path, const std::string& text) override {
+    if (!present_) return Status::fail(Err::Unavailable, "no card");
+    if (readOnly_ || failWrites_) return Status::fail(Err::StorageFailure, "write failed");
+    files_[path] = text;
+    ++writes_;
+    return Status::success();
+  }
+  void setReadOnly(bool r) { readOnly_ = r; }          // a write-protected card
+  void failWrites(bool f) { failWrites_ = f; }         // an error while writing
+  size_t writes() const { return writes_; }
+  const std::string* get(const std::string& path) const {
+    auto it = files_.find(path);
+    return it == files_.end() ? nullptr : &it->second;
+  }
+  bool has(const std::string& path) const { return files_.count(path) != 0; }
 
   Result<std::vector<FileEntry>> list(const std::string& dir, size_t maxEntries) override {
     if (!present_) return Status::fail(Err::Unavailable, "no card");
@@ -44,7 +63,8 @@ class FakeFileSource : public IFileSource {
 
  private:
   std::map<std::string, std::string> files_;
-  bool present_ = true;
+  bool present_ = true, readOnly_ = false, failWrites_ = false;
+  size_t writes_ = 0;
 };
 
 }  // namespace iris::testkit

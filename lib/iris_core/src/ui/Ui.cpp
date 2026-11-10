@@ -136,6 +136,7 @@ void UiApp::tick() {
   ctx_.learn.tick();
   ctx_.transmit.service();
   ctx_.explore.tick();
+  ctx_.sequence.service();
 
   if (ctx_.learn.state() == LearnState::Captured && prevLearn_ != LearnState::Captured && ctx_.learn.result()) {
     ctx_.captures.push_front(CaptureRecord{ctx_.clock.nowMs(), *ctx_.learn.result()});
@@ -143,13 +144,16 @@ void UiApp::tick() {
   }
   // A change in any service state is visible on screen: redraw now instead of at the next 200 ms tick.
   if (ctx_.learn.state() != prevLearn_ || ctx_.transmit.state() != prevTx_ || ctx_.explore.state() != prevExplore_ ||
-      ctx_.explore.sentCount() != prevExploreSent_) {
+      ctx_.explore.sentCount() != prevExploreSent_ || ctx_.sequence.state() != prevSeq_ ||
+      ctx_.sequence.sent() != prevSeqSent_) {
     dirty_ = true;
   }
   prevLearn_ = ctx_.learn.state();
   prevTx_ = ctx_.transmit.state();
   prevExplore_ = ctx_.explore.state();
   prevExploreSent_ = ctx_.explore.sentCount();
+  prevSeq_ = ctx_.sequence.state();
+  prevSeqSent_ = ctx_.sequence.sent();
 
   if (!stack_.empty()) stack_.back()->onTick(ctx_);
   renderIfNeeded(false);

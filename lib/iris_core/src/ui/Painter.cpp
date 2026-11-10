@@ -117,6 +117,14 @@ void Painter::batteryGauge(int segments) {
   display_.setDrawColor(true);
 }
 
+void Painter::pageDots(int pages, int current) {
+  constexpr int kDot = 3, kStep = 5, kY = 59;
+  const int x0 = display_.width() - 2 - pages * kStep;
+  mix("dots", pages, current);
+  display_.setDrawColor(true);
+  for (int i = 0; i < pages; ++i) display_.drawRect(x0 + i * kStep, kY, kDot, kDot, i == current);
+}
+
 void Painter::toastFooter(std::string_view s) {
   footerLocked_ = false;
   text(0, kFooterRow, s);

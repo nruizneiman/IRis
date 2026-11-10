@@ -41,6 +41,8 @@ class Painter {
   void frame(int x, int y, int w, int h);                       // 1 px outline
   // Battery outline with 0..4 bars, dark on the lit title bar, in its right-most 17 pixels. Call after title().
   void batteryGauge(int segments);
+  // One dot per page in the bottom-right corner, the current page filled (the icon menu with more than one page).
+  void pageDots(int pages, int current);
   // Draws a transient message on the footer row and keeps the screen from drawing over it.
   void toastFooter(std::string_view s);
   uint32_t hash() const { return hash_; }

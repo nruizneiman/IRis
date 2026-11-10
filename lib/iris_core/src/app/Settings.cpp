@@ -10,8 +10,8 @@ namespace iris {
 
 std::string serializeSettings(const Settings& s) {
   char body[80];
-  std::snprintf(body, sizeof body, "invert=%d\ntimeout=%u\nlang=%u\n", s.invertDisplay ? 1 : 0,
-                static_cast<unsigned>(s.captureTimeoutSec), static_cast<unsigned>(s.language));
+  std::snprintf(body, sizeof body, "invert=%d\ntimeout=%u\nlang=%u\ncard=%d\n", s.invertDisplay ? 1 : 0,
+                static_cast<unsigned>(s.captureTimeoutSec), static_cast<unsigned>(s.language), s.cardInLibrary ? 1 : 0);
   const std::string b = body;
   char header[48];
   std::snprintf(header, sizeof header, "IRISCFG 1 %08lx %lu\n", static_cast<unsigned long>(crc32(b)),
@@ -50,6 +50,8 @@ Result<Settings> deserializeSettings(const std::string& text) {
       s.captureTimeoutSec = static_cast<uint8_t>(v);
     } else if (k == "lang" && v >= 0 && v < static_cast<long>(kLangCount)) {
       s.language = static_cast<Lang>(v);
+    } else if (k == "card" && (v == 0 || v == 1)) {
+      s.cardInLibrary = v == 1;
     }
   }
   return s;

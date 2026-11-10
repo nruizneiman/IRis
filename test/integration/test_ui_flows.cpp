@@ -19,7 +19,7 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   CHECK(r.topId() == std::string("home"));
   // Icon grid: one 16x16 icon per entry, a frame on the selected one, only its name as text, battery in the title bar.
   CHECK(r.display.shownBitmaps() == 6);
-  CHECK(r.display.shownShapes() == 2);  // title bar + selection frame
+  CHECK(r.display.shownShapes() == 2 + 2);  // title bar + selection frame + the two page dots (10 icons, 6 per page)
   CHECK(isSelected(r.screen(), "Controles"));
   CHECK_FALSE(r.shows("Aprender señal"));
   CHECK(r.shows("Bat n/d"));  // no measurement circuit: never an invented percentage
@@ -27,11 +27,11 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   CHECK(isSelected(r.screen(), "Aprender señal"));
   r.press(Key::Left);
   CHECK(isSelected(r.screen(), "Controles"));
-  r.press(Key::Left);         // wraps to the last of the six
-  CHECK(isSelected(r.screen(), "Importar"));
+  r.press(Key::Left);         // wraps to the last of the ten
+  CHECK(isSelected(r.screen(), "Configuración"));
   r.press(Key::Right);
   r.press(Key::Down);         // a whole row down: 0 -> 3
-  CHECK(isSelected(r.screen(), "Herramientas IR"));
+  CHECK(isSelected(r.screen(), "Be Gone"));
   r.press(Key::Up);
   CHECK(isSelected(r.screen(), "Controles"));
   r.press(Key::Left);
@@ -51,7 +51,7 @@ TEST_CASE("scenario ui: with a battery reading the title shows an estimate and t
   CHECK_FALSE(r.shows("~"));
   CHECK_FALSE(r.shows("3.87 V"));      // the exact voltage is on the diagnostics page
   CHECK_FALSE(r.shows("Bat n/d"));
-  CHECK(r.display.shownShapes() == 2 + 1 + 1 + 4);  // title bar + frame, outline, nub, four bars (3.87 V is about 77 %)
+  CHECK(r.display.shownShapes() == 2 + 2 + 1 + 1 + 4);  // title bar + frame, page dots, outline, nub, four bars (3.87 V is about 77 %)
 }
 
 TEST_CASE("scenario ui: the diagnostics page gives the exact voltage and the estimate") {
@@ -637,7 +637,7 @@ TEST_CASE("scenario ui: storage page and wipe-all with confirmation") {
                             buildRawSignal({500, 500, 500, 500}).value());
   open(r, "Configuración");
   open(r, "Almacenamiento");
-  CHECK(r.shows("Controles: 1/32"));
+  CHECK(r.shows("Controles: 1/64"));
   CHECK(r.shows("Con señal: 1"));
   CHECK(r.shows("RAW: 4/"));
   r.press(Key::Ok);
@@ -662,12 +662,12 @@ TEST_CASE("scenario ui: display failure never blocks navigation and recovers") {
   r.press(Key::Down);
   CHECK_FALSE(r.ctx.displayHealthy);
   CHECK(r.log.contains("flush failed"));
-  r.press(Key::Ok);  // blind navigation: the Down above already moved the selection to Herramientas IR (0 -> 3)
-  CHECK(r.topId() == std::string("tools"));  // the UI logic keeps working without a picture
+  r.press(Key::Ok);  // blind navigation: the Down above already moved the selection to Be Gone (0 -> 3)
+  CHECK(r.topId() == std::string("begone"));  // the UI logic keeps working without a picture
   r.display.setFailFlush(false);
   r.advance(2500);
   CHECK(r.ctx.displayHealthy);
-  CHECK(r.shows("Info del receptor"));
+  CHECK(r.shows("Acción"));
   CHECK(r.log.contains("recovered"));
 }
 

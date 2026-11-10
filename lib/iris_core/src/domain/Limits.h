@@ -8,8 +8,14 @@
 namespace iris::limits {
 
 constexpr size_t kMaxCategories = 16;
-constexpr size_t kMaxRemotes = 32;
-constexpr size_t kMaxButtonsPerRemote = 40;
+constexpr size_t kMaxRemotes = 64;
+// Buttons live in RAM (about 150-200 bytes each with their signal), so the library is bounded by a total and each remote
+// by a generous share of it. Controls read straight from the SD card use kMaxCardButtons instead and are not stored.
+constexpr size_t kMaxButtonsPerRemote = 256;
+constexpr size_t kMaxTotalButtons = 1200;
+constexpr size_t kMaxCardButtons = 512;
+constexpr size_t kMaxCardRawEntries = 12000;     // RAW entries kept from one card file (2 bytes each)
+constexpr size_t kMaxCardFileBytes = 65536;      // a larger file is not read (the upload tool enforces the same)
 constexpr size_t kMaxNameBytes = 20;  // UTF-8 bytes, not characters
 
 constexpr size_t kMaxRawEntries = 1024;         // per raw frame (marks + spaces)

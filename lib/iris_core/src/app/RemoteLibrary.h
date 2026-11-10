@@ -46,6 +46,7 @@ class RemoteLibrary {
   const Remote* findRemote(Id id) const;
   const Button* findButton(Id remoteId, Id buttonId) const;
   size_t totalRawEntries() const;
+  size_t totalButtons() const;
 
   // dirty() is true after any successful mutation until markClean() (called after a save).
   bool dirty() const { return dirty_; }

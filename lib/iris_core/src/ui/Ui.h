@@ -12,12 +12,14 @@
 #include "app/ExplorationRun.h"
 #include "app/LearnSession.h"
 #include "app/RemoteLibrary.h"
+#include "app/SequenceRunner.h"
 #include "app/Settings.h"
 #include "app/TransmitService.h"
 #include "diagnostics/RingLogSink.h"
 #include "hardware/IBatteryMonitor.h"
 #include "hardware/IBlobStore.h"
 #include "hardware/IButtonInput.h"
+#include "hardware/IFileSink.h"
 #include "hardware/IFileSource.h"
 #include "hardware/IDisplay.h"
 #include "hardware/IIrReceiver.h"
@@ -74,7 +76,7 @@ struct UiContext {
             IBlobStore& store_, const DeviceInfo& info_)
       : library(library_), repo(repo_), settingsStore(settingsStore_), settings(settings_), learn(learn_),
         transmit(transmit_), explore(explore_), receiver(receiver_), rawButtons(rawButtons_), battery(battery_),
-        log(log_), clock(clock_), store(store_), info(info_) {}
+        log(log_), clock(clock_), store(store_), info(info_), sequence(transmit_, clock_, &log_) {}
 
   RemoteLibrary& library;
   LibraryRepository& repo;
@@ -90,8 +92,10 @@ struct UiContext {
   const IClock& clock;
   IBlobStore& store;
   const DeviceInfo& info;
+  SequenceRunner sequence;  // loop, crazy and Be Gone modes; serviced on every tick whatever screen is up
 
   IFileSource* files = nullptr;  // removable card with Flipper-IRDB files; null when the build has no card support
+  IFileSink* sink = nullptr;     // the same card for exporting; null when the build cannot write to it
   bool displayHealthy = true;
   // False when the stored data could not be read for a reason other than damage (read error, low memory,
   // newer firmware): saving would overwrite data we never saw. The UI keeps working in memory only.
@@ -158,6 +162,8 @@ class UiApp {
   TxState prevTx_ = TxState::Idle;
   ExplorationState prevExplore_ = ExplorationState::Idle;
   uint32_t prevExploreSent_ = 0;
+  SequenceState prevSeq_ = SequenceState::Idle;
+  uint32_t prevSeqSent_ = 0;
   bool displayErrorLogged_ = false;
 };
 

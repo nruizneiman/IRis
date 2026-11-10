@@ -79,6 +79,7 @@ struct Device {
             store, info),
         ui(ctx, display, iris::makeHomeScreen()) {
     ctx.files = &sd;
+    ctx.sink = &sd;
     receivers.add(receiver1);
 #ifdef IRIS_ENABLE_RX2
     receivers.add(receiver2);
