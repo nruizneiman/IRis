@@ -42,7 +42,7 @@ asks first. Use it on equipment that is yours.
 | Two 10 kΩ resistors | Optional: battery level on screen |
 | Perfboard, pin headers, M3 screws | |
 
-The printable case will be published on **MakerWorld** (link coming soon). How it is designed and how to print it:
+The printable case is on [**MakerWorld**](https://makerworld.com/en/models/3592563-iris-universal-ir-remote-case-esp32-oled#profileId-4115008). How it is designed and how to print it:
 [`docs/case-print.md`](docs/case-print.md).
 
 Wiring and assembly:

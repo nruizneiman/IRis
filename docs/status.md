@@ -17,7 +17,7 @@ with a multimeter only; **PC-tested** = covered by the tests on the PC, not spec
 | Codec, domain model <-> IRremoteESP8266 | PC-tested against the real library code | `docs/ir-notes.md`. On the device only NEC remotes were confirmed |
 | Manual signals, code exploration | PC-tested | |
 | Serial bench console (`bench`), display probe (`display_probe`) | Used during bring-up | Commands in `docs/physical-test-plan.md` |
-| Printed case | In use | To be published on MakerWorld; `docs/case-print.md` |
+| Printed case | In use | [On MakerWorld](https://makerworld.com/en/models/3592563-iris-universal-ir-remote-case-esp32-oled#profileId-4115008); `docs/case-print.md` |
 | Second receiver | PC-tested | Pin reserved, not wired |
 | Second emitter channel, state-based (A/C) protocols, RAW editor on the device | Not implemented | `docs/risks.md` |
 | Wokwi project | Not validated | Never opened in Wokwi |
