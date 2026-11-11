@@ -90,7 +90,7 @@ Wiring (4.3). Console `b`, then the UI.
 
 1. `b`: press each key; every key must show `1 -> 0` on press and `0 -> 1` on release, no other key reacting.
 2. Boot with a key held (firmware): nothing triggers on its own until released.
-3. UI *Configuración > Prueba de botones*: all five rows light, "Pulso" for taps, "Largo" for a hold of about 0.7 s, Up/Down repeat while held.
+3. UI *Configuración > Diagnóstico > Prueba de botones*: all five rows light, "Pulso" for taps, "Largo" for a hold of about 0.7 s, Up/Down repeat while held.
 4. Tap each key 20 times quickly: no double events.
 
 **Pass:** 5/5 keys correct, no ghost events *(proposed)*. **If it fails:** a key stuck at 0 means a short or a strapping pin problem; a key that never changes is open/miswired. Debounce timings are provisional (`DebounceConfig`): note any miss or double and adjust only after more observations.
@@ -103,7 +103,7 @@ Wiring (4.4), powered from 3V3. Console.
 2. `l` with no remote in view: edges about 0 and time-low about 0 % in normal room light. Record under fluorescent / LED / sunlight too.
 3. `r` and press a key of your reference remote 1 m away, aimed: protocol and bits as expected; addresses/commands match the remote's documentation when you have it. Hold a key: a repeat code appears flagged `repeat=1`, not as a new command.
 4. Raw durations: compare to the nominal timing of that protocol; deviations of a few tens of µs are expected (the receiver reshapes pulses). Record 3 captures.
-5. UI: *Herramientas IR > Captura RAW* and *Aprender señal* into a button; reboot; the stored signal is still there and equals the capture (same protocol, address, command; RAW original present).
+5. UI: *Escuchar* (save a capture into a button) and *Aprender señal* into a button; reboot; the stored signal is still there and equals the capture (same protocol, address, command; RAW original present).
 6. Range/angle: receive reliably at 1, 3, 5 m and 0 / 30 / 60° from the reference remote; record the success rate of 10 presses at each.
 7. Sony remotes (if any): see the datasheet note in 4.4; record whether decoding is reliable.
 
@@ -185,7 +185,7 @@ Full firmware on the final wiring.
 
 1. Create 2 controls with 5 buttons each (learn 3, manual 2); reboot; everything is present. Send each button.
 2. Storage power-cut test: create/edit/save about 20 times while removing power at random moments (switch off during a *Guardado* toast and at random). After each boot the library loads (current or backup index; the boot toast says which). Record any "Perdido" or "Datos dañados" message, with the number of cuts.
-3. *Diagnóstico HW*: note `Heap` (free and minimum) after boot and after a long session. If the minimum free heap is below about 60 KB, report it: the memory budget assumptions of `docs/persistence.md` need revisiting.
+3. *Configuración > Diagnóstico > Estado*: note `Heap` (free and minimum) after boot and after a long session. If the minimum free heap is below about 60 KB, report it: the memory budget assumptions of `docs/persistence.md` need revisiting.
 4. Endurance: 1 hour with the screen on, 100 sends, 2 captures every 10 minutes: no unexpected resets, no watchdog entry, no display glitches.
 5. Thermal: nothing noticeably hot (MOSFET, resistor, regulator, cell) after the endurance run.
 

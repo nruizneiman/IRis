@@ -269,7 +269,7 @@ switch, not a GPIO.
 3. Do not power the LED branch through the breadboard rail, or at least measure it.
 4. Use a healthy cell: old or small cells have high internal resistance and sag under pulse current.
 5. Measure the 3.3 V rail with an oscilloscope while sending; the ESP32 module is specified for 3.0 V to 3.6 V *(to verify
-   in its datasheet)* and the firmware records the reset reason of every boot (*Herramientas IR > Historial arranques*;
+   in its datasheet)* and the firmware records the reset reason of every boot (*Configuración > Diagnóstico > Historial arranques*;
    a `BROWNOUT` entry means the supply dipped).
 
 ### 4.8 Grounding and decoupling summary

@@ -32,8 +32,8 @@ struct CardBrowserOptions {
 };
 std::unique_ptr<Screen> makeCardBrowser(CardBrowserOptions options);
 
-// The card's top-level folders as rows for the Controles list ("TVs/" with "SD" on the right); empty when there is no
-// card or the setting that mixes them in is off.
+// The card's top-level folders (and controls) as rows for the Controles list ("TVs/" with "SD" on the right); empty
+// when there is no card. Inside a folder the first row imports every control of that folder.
 std::vector<ListItem> cardLibraryItems(UiContext& c);
 
 std::unique_ptr<Screen> makeCardRemoteScreen(const std::string& path);  // buttons of a card control; OK sends
@@ -41,13 +41,9 @@ std::unique_ptr<Screen> makeCardRemoteScreen(const std::string& path);  // butto
 // folder, or an existing one), then works through the files a few at a time and can be cancelled.
 std::unique_ptr<Screen> makeImportFolderPicker(const std::string& dir);
 
-// Picks a control from the saved ones or from the card, then calls `onPick`.
-std::unique_ptr<Screen> makeRemoteSourcePicker(const std::string& title, std::function<Nav(UiContext&, RemoteRef)> onPick);
-
+// Opened from the menu of a control (Right on its row), saved or on the card.
 std::unique_ptr<Screen> makeLoopSetup(RemoteRef remote);   // choose buttons and the pause, then run
 std::unique_ptr<Screen> makeCrazySetup(RemoteRef remote);  // choose the pause, then run
-std::unique_ptr<Screen> makeLoopMode();                    // home entries: pick the control first
-std::unique_ptr<Screen> makeCrazyMode();
 std::unique_ptr<Screen> makeBeGoneMode();
 std::unique_ptr<Screen> makeListenMode();
 

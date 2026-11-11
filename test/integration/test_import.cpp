@@ -17,33 +17,32 @@ std::string fixture(const char* name) {
   return ss.str();
 }
 
-// Opens Importar > TVs > LG > "LG" and stops on the preview screen.
-void openLgPreview(UiRig& r) {
-  REQUIRE(open(r, "Importar"));
+// Opens Controles > TVs > LG > "LG" (the control read from the card) and its menu, and chooses Importar.
+void importLg(UiRig& r) {
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "TVs/"));
   REQUIRE(open(r, "LG/"));
   REQUIRE(open(r, "LG"));
-  REQUIRE(r.topId() == std::string("import-preview"));
+  REQUIRE(r.topId() == std::string("card-remote"));
+  r.press(Key::Right);
+  REQUIRE(open(r, "Importar"));
 }
 
 }  // namespace
 
-TEST_CASE("import: without a card the home explains it and stays put") {
-  UiRig r;
-  r.card.setPresent(false);
-  open(r, "Importar");
-  CHECK(r.topId() == std::string("home"));
-  CHECK(r.shows("Sin tarjeta SD"));
-}
-
-TEST_CASE("import: browse the card, preview a real IRDB file and create a control from it") {
+TEST_CASE("import: browse the card, open a real IRDB file and create a control from it") {
   UiRig r;
   r.card.add("/irdb/TVs/LG/LG.ir", fixture("irdb_LG.ir"));
   r.card.add("/irdb/TVs/LG/notes.txt", "not a remote");  // ignored: not a .ir file
-  openLgPreview(r);
-  CHECK(r.shows("Botones: 6"));
+  REQUIRE(open(r, "Controles"));
+  REQUIRE(open(r, "TVs/"));
+  REQUIRE(open(r, "LG/"));
+  CHECK_FALSE(r.shows("notes"));
+  REQUIRE(open(r, "LG"));
+  CHECK(r.shows("Power"));  // the control can be tried before it is imported
+  r.press(Key::Right);
   CHECK_FALSE(r.shows("Sin soporte"));
-  r.press(Key::Ok);  // import
+  REQUIRE(open(r, "Importar"));
   CHECK(r.topId() == std::string("import-category"));
   open(r, "+ Nueva categoría");
   typeText(r, "TV");  // a suggested name
@@ -67,8 +66,7 @@ TEST_CASE("import: importing the same file twice keeps both, the second named 'L
   r.card.add("/irdb/TVs/LG/LG.ir", fixture("irdb_LG.ir"));
   const Id cat = r.library.addCategory("TV").value();
   for (int i = 0; i < 2; ++i) {
-    openLgPreview(r);
-    r.press(Key::Ok);
+    importLg(r);
     REQUIRE(open(r, "TV"));
     REQUIRE(r.library.data().remotes.size() == static_cast<size_t>(i + 1));
     r.longPress(Key::Left);  // back to home
@@ -86,11 +84,12 @@ TEST_CASE("import: duplicate button names inside one file are made unique") {
       "name: Power\ntype: parsed\nprotocol: NEC\naddress: 04 00 00 00\ncommand: 09 00 00 00\n";
   r.card.add("/irdb/TVs/Dup/Dup.ir", text);
   const Id cat = r.library.addCategory("TV").value();
-  REQUIRE(open(r, "Importar"));
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "TVs/"));
   REQUIRE(open(r, "Dup/"));
   REQUIRE(open(r, "Dup"));
-  r.press(Key::Ok);
+  r.press(Key::Right);
+  REQUIRE(open(r, "Importar"));
   REQUIRE(open(r, "TV"));
   REQUIRE(r.library.data().remotes.size() == 1);
   const auto& b = r.library.data().remotes[0].buttons;
@@ -107,22 +106,24 @@ TEST_CASE("import: a file with nothing convertible, and a file that is not IRDB,
   r.card.add("/irdb/Misc/Bad/Bad.ir", "this is not an IRDB file\n");
   r.library.addCategory("TV");
 
-  REQUIRE(open(r, "Importar"));
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "Misc/"));
   REQUIRE(open(r, "Odd/"));
   REQUIRE(open(r, "Odd"));
-  CHECK(r.shows("Botones: 0"));
-  CHECK(r.shows("Sin soporte: 1"));
-  r.press(Key::Ok);
+  CHECK(r.shows("Sin soporte: 1"));  // no usable button: the screen says why
+  r.press(Key::Right);
+  CHECK(r.shows("Sin soporte: 1"));  // and so does the menu
+  REQUIRE(open(r, "Importar"));
   CHECK(r.shows("Nada para importar"));
-  CHECK(r.topId() == std::string("import-preview"));
+  CHECK(r.topId() == std::string("card-remote-menu"));
+  r.press(Key::Left);
   r.press(Key::Left);
   r.press(Key::Left);
   REQUIRE(open(r, "Bad/"));
   REQUIRE(open(r, "Bad"));
-  CHECK(r.shows("No es un archivo IRDB"));
-  r.press(Key::Ok);
-  CHECK(r.shows("Nada para importar"));
+  CHECK(r.shows("No es un archivo IR"));  // the row is cut at the screen width
+  r.press(Key::Right);  // no menu for a file that could not be read
+  CHECK(r.topId() == std::string("card-remote"));
   CHECK(r.library.data().remotes.empty());
 }
 

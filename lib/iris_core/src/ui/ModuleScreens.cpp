@@ -185,21 +185,28 @@ P makeCardBrowser(CardBrowserOptions o) {
 
 std::vector<ListItem> cardLibraryItems(UiContext& c) {
   std::vector<ListItem> it;
-  if (!c.settings.cardInLibrary || !c.files || !c.files->available()) return it;
-  const Listing l = listCard(c, "/irdb", true);
+  if (!c.files || !c.files->available()) return it;
+  const std::string root = "/irdb";
+  const Listing l = listCard(c, root, true);
   if (!l.error.empty()) return it;
   for (const FileEntry& e : l.entries) {
-    if (!e.isDir) continue;
     const std::string name = e.name;
-    it.push_back({name + "/", "SD", [name](UiContext&) {
+    if (!e.isDir) {  // a control lying directly in /irdb
+      it.push_back({name.substr(0, name.size() - 3), "SD",
+                    [root, name](UiContext&) { return Nav::push(makeCardRemoteScreen(root + "/" + name)); }});
+      continue;
+    }
+    it.push_back({name + "/", "SD", [root, name](UiContext&) {
                     CardBrowserOptions o;
                     o.id = "card-library";
                     o.rootTitle = name;
-                    o.root = "/irdb/" + name;
+                    o.root = root + "/" + name;
                     o.dir = o.root;
                     o.onFile = [](UiContext&, const std::string& dir, const std::string& file) {
                       return Nav::push(makeCardRemoteScreen(dir + "/" + file));
                     };
+                    o.onFolder = [](UiContext&, const std::string& dir) { return Nav::push(makeImportFolderPicker(dir)); };
+                    o.folderLabel = "» Importar carpeta";
                     return Nav::push(makeCardBrowser(std::move(o)));
                   }});
   }
@@ -209,6 +216,13 @@ std::vector<ListItem> cardLibraryItems(UiContext& c) {
 namespace {
 
 P makeCardRemoteMenu(const std::string& path, std::shared_ptr<RemoteView> view);
+
+// What a card file held that could not be used, as rows without an action.
+void addReportRows(std::vector<ListItem>& it, const ImportReport& rep) {
+  if (rep.unsupported) it.push_back({"Sin soporte: " + numStr(rep.unsupported), "", nullptr});
+  if (rep.invalid) it.push_back({"Inválidos: " + numStr(rep.invalid), "", nullptr});
+  if (rep.overCapacity) it.push_back({"Sin lugar: " + numStr(rep.overCapacity), "", nullptr});
+}
 
 }  // namespace
 
@@ -240,6 +254,7 @@ P makeCardRemoteScreen(const std::string& path) {
                       return Nav::none();
                     }});
     }
+    if (it.empty()) addReportRows(it, view->report);  // nothing usable: say why instead of an empty screen
     return it;
   });
   list->titleFn([st, path](UiContext&) {
@@ -258,54 +273,25 @@ P makeCardRemoteScreen(const std::string& path) {
 namespace {
 
 P makeCardRemoteMenu(const std::string& path, std::shared_ptr<RemoteView> view) {
-  return std::make_unique<ListScreen>("card-remote-menu", "Control SD", [path, view](UiContext& c) {
-    (void)c;
+  return std::make_unique<ListScreen>("card-remote-menu", "Control SD", [path, view](UiContext&) {
     std::vector<ListItem> it;
-    it.push_back({"Importar", "", [view](UiContext&) { return Nav::push(makeImportViewCategoryPicker(view)); }});
+    it.push_back({"Importar", "", [view](UiContext& c) {
+                    const bool hasSignal = std::any_of(view->buttons.begin(), view->buttons.end(),
+                                                       [](const ViewButton& b) { return b.signal.has_value(); });
+                    if (!hasSignal) {
+                      c.toast("Nada para importar");
+                      return Nav::none();
+                    }
+                    return Nav::push(makeImportViewCategoryPicker(view));
+                  }});
     it.push_back({"Modo loop", "", [path](UiContext&) { return Nav::push(makeLoopSetup(RemoteRef{0, path})); }});
     it.push_back({"Modo loco", "", [path](UiContext&) { return Nav::push(makeCrazySetup(RemoteRef{0, path})); }});
+    addReportRows(it, view->report);
     return it;
   });
-}
-
-// ---------------------------------------------------------------- picking a control (saved or card)
-
-P makeSavedRemoteList(const std::string& title, std::function<Nav(UiContext&, RemoteRef)> onPick) {
-  auto list = std::make_unique<ListScreen>("pick-saved-remote", title, [onPick](UiContext& c) {
-    std::vector<ListItem> it;
-    for (const Remote& r : c.library.data().remotes) {
-      const Category* cat = c.library.findCategory(r.categoryId);
-      const Id rid = r.id;
-      it.push_back({r.name, cat ? cat->name : "", [rid, onPick](UiContext& c2) { return onPick(c2, RemoteRef{rid, ""}); }});
-    }
-    return it;
-  });
-  list->emptyText("Cree un control antes");
-  return list;
 }
 
 }  // namespace
-
-P makeRemoteSourcePicker(const std::string& title, std::function<Nav(UiContext&, RemoteRef)> onPick) {
-  return std::make_unique<ListScreen>("pick-source", title, [title, onPick](UiContext& c) {
-    std::vector<ListItem> it;
-    it.push_back({"Guardados", numStr(c.library.data().remotes.size()), [title, onPick](UiContext&) {
-                    return Nav::push(makeSavedRemoteList(title, onPick));
-                  }});
-    if (c.files && c.files->available()) {
-      it.push_back({"Tarjeta SD", "", [title, onPick](UiContext&) {
-                      CardBrowserOptions o;
-                      o.id = "pick-card-remote";
-                      o.rootTitle = title;
-                      o.onFile = [onPick](UiContext& c2, const std::string& dir, const std::string& file) {
-                        return onPick(c2, RemoteRef{0, dir + "/" + file});
-                      };
-                      return Nav::push(makeCardBrowser(std::move(o)));
-                    }});
-    }
-    return it;
-  });
-}
 
 // ---------------------------------------------------------------- loop
 
@@ -401,14 +387,6 @@ P makeCrazySetup(RemoteRef remote) {
     }));
   });
   return form;
-}
-
-P makeLoopMode() {
-  return makeRemoteSourcePicker("Loop: control", [](UiContext&, RemoteRef r) { return Nav::push(makeLoopSetup(std::move(r))); });
-}
-
-P makeCrazyMode() {
-  return makeRemoteSourcePicker("Loco: control", [](UiContext&, RemoteRef r) { return Nav::push(makeCrazySetup(std::move(r))); });
 }
 
 // ---------------------------------------------------------------- Be Gone

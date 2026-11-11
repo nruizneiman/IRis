@@ -105,19 +105,22 @@ TEST_CASE("language: the main screens read English with no Spanish left") {
   r.settings.language = Lang::En;
   r.advance(300);
   requireEnglish(r, "home");
-  r.press(Key::Right);
-  requireEnglish(r, "home 2");
+  for (int i = 0; i < 6; ++i) {  // the name of every home icon
+    r.press(Key::Right);
+    requireEnglish(r, "home icon");
+  }
   REQUIRE(open(r, "Herramientas IR"));
   requireEnglish(r, "tools");
-  REQUIRE(open(r, "Diagnóstico HW"));
-  requireEnglish(r, "diagnostics");
-  r.longPress(Key::Left);
   r.longPress(Key::Left);
   REQUIRE(open(r, "Configuración"));
   requireEnglish(r, "settings");
   REQUIRE(open(r, "Almacenamiento"));
   requireEnglish(r, "storage");
-  r.longPress(Key::Left);
+  r.press(Key::Left);
+  REQUIRE(open(r, "Diagnóstico"));
+  requireEnglish(r, "diagnostics menu");
+  REQUIRE(open(r, "Estado"));
+  requireEnglish(r, "diagnostics");
   r.longPress(Key::Left);
   REQUIRE(open(r, "Controles"));
   requireEnglish(r, "remotes");
@@ -155,27 +158,29 @@ TEST_CASE("language: library, menus, learn, import and exploration screens read 
   r.longPress(Key::Left);
   REQUIRE(open(r, "Herramientas IR"));
   requireEnglish(r, "tools");
-  REQUIRE(open(r, "Info del receptor"));
-  requireEnglish(r, "receiver info");
-  r.press(Key::Left);
-  REQUIRE(open(r, "Historial arranques"));
-  requireEnglish(r, "boot history");
+  REQUIRE(open(r, "Últimas capturas"));
+  requireEnglish(r, "capture history");
   r.press(Key::Left);
   REQUIRE(open(r, "Exploración"));
   requireEnglish(r, "exploration form");
   r.longPress(Key::Left);
 
   REQUIRE(open(r, "Configuración"));
+  REQUIRE(open(r, "Diagnóstico"));
   REQUIRE(open(r, "Info del equipo"));
   requireEnglish(r, "device info");
+  r.press(Key::Left);
+  REQUIRE(open(r, "Historial arranques"));
+  requireEnglish(r, "boot history");
   r.press(Key::Left);
   REQUIRE(open(r, "Prueba de botones"));
   requireEnglish(r, "button test");
   r.longPress(Key::Left);
   r.longPress(Key::Left);
 
-  REQUIRE(open(r, "Importar"));
-  requireEnglish(r, "import browser");
+  REQUIRE(open(r, "Controles"));
+  REQUIRE(open(r, "TVs/"));
+  requireEnglish(r, "card folder");
 }
 
 TEST_CASE("language: the mode screens read English with no Spanish left") {
@@ -184,12 +189,7 @@ TEST_CASE("language: the mode screens read English with no Spanish left") {
   const Ids ids = seed(r);
   REQUIRE(r.library.setButtonSignal(ids.remote, ids.button, buildDecodedSignal(Protocol::Nec, 1, 2, 32).value()).ok());
   r.card.add("/irdb/TVs/LG/LG_TV.ir", "Filetype: IR signals file\nVersion: 1\n#\nname: Power\ntype: parsed\nprotocol: NEC\naddress: 04 00 00 00\ncommand: 08 00 00 00\n");
-  requireEnglish(r, "home page 1");
-  r.press(Key::Down);
-  r.press(Key::Down);
-  requireEnglish(r, "home page 2");
-
-  r.longPress(Key::Left);
+  requireEnglish(r, "home");
   REQUIRE(open(r, "Be Gone"));
   requireEnglish(r, "begone form");
   REQUIRE(select(r, "Elegir categoría"));
@@ -201,19 +201,19 @@ TEST_CASE("language: the mode screens read English with no Spanish left") {
   requireEnglish(r, "begone run");
   r.longPress(Key::Left);
 
+  REQUIRE(open(r, "Controles"));
+  REQUIRE(open(r, "TV"));
+  r.press(Key::Right);  // menu of the control "Sala"
   REQUIRE(open(r, "Modo loop"));
-  requireEnglish(r, "loop source");
-  REQUIRE(open(r, "Guardados"));
-  REQUIRE(open(r, "Sala"));
   requireEnglish(r, "loop setup");
   r.longPress(Key::Left);
 
-  REQUIRE(open(r, "Modo loco"));
-  REQUIRE(open(r, "Tarjeta SD"));
-  requireEnglish(r, "crazy card browser");
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "TVs/"));
   REQUIRE(open(r, "LG/"));
   REQUIRE(open(r, "LG_TV"));
+  r.press(Key::Right);  // menu of the card control
+  REQUIRE(open(r, "Modo loco"));
   requireEnglish(r, "crazy setup");
   REQUIRE(select(r, "Iniciar"));
   r.press(Key::Ok);
@@ -236,7 +236,7 @@ TEST_CASE("language: the mode screens read English with no Spanish left") {
   requireEnglish(r, "card remote menu");
   r.longPress(Key::Left);
 
-  REQUIRE(open(r, "Importar"));
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "TVs/"));
   REQUIRE(open(r, "LG/"));
   REQUIRE(open(r, "» Importar carpeta"));

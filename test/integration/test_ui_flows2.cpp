@@ -43,13 +43,14 @@ TEST_CASE("scenario ui: duplicating with a taken name stays in the editor with a
   CHECK(r.topId() == std::string("text-input"));
 }
 
-TEST_CASE("scenario ui: a RAW capture can be saved into an existing button") {
+TEST_CASE("scenario ui: a capture can be saved into an existing button") {
   UiRig r;
   Ids ids = seed(r);
-  open(r, "Herramientas IR");
-  open(r, "Captura RAW");
+  open(r, "Escuchar");
   r.rx.push(necCapture(0x04, 0x08));
   r.advance(100);
+  r.press(Key::Ok);  // stop listening: the list of captures
+  r.press(Key::Ok);  // menu of capture #1
   CHECK(open(r, "Guardar en botón"));
   CHECK(r.shows("Guardar en: control"));
   CHECK(open(r, "Sala"));
@@ -58,20 +59,20 @@ TEST_CASE("scenario ui: a RAW capture can be saved into an existing button") {
   REQUIRE(b->signal.has_value());
   CHECK(b->signal->recognition == Recognition::Recognized);
   CHECK(b->signal->originalCapture.has_value());
-  CHECK(r.topId() == std::string("tools"));  // back where the tool was opened
-  CHECK(r.learn.state() == LearnState::Idle);
+  CHECK(r.topId() == std::string("listen"));  // back on the list of captures
   CHECK_FALSE(r.library.dirty());
 }
 
-TEST_CASE("scenario ui: a RAW capture can be saved into a brand new button") {
+TEST_CASE("scenario ui: a capture can be saved into a brand new button") {
   UiRig r;
   Ids ids = seed(r);
-  open(r, "Herramientas IR");
-  open(r, "Captura RAW");
+  open(r, "Escuchar");
   ReceivedCapture c;
   c.raw.durationsUs = syntheticUnknownPattern();
   r.rx.push(c);
   r.advance(100);
+  r.press(Key::Ok);  // stop listening
+  r.press(Key::Ok);  // menu of capture #1
   CHECK(open(r, "Guardar en botón"));
   CHECK(open(r, "Sala"));
   CHECK(open(r, "+ Nuevo botón"));
@@ -81,7 +82,7 @@ TEST_CASE("scenario ui: a RAW capture can be saved into a brand new button") {
   CHECK(nb.name == "Extra");
   REQUIRE(nb.signal.has_value());
   CHECK(nb.signal->recognition == Recognition::Unknown);
-  CHECK(r.topId() == std::string("tools"));
+  CHECK(r.topId() == std::string("listen"));
 }
 
 TEST_CASE("scenario ui: saving a capture into a remote whose raw budget is full is refused and the capture is kept") {
@@ -94,18 +95,23 @@ TEST_CASE("scenario ui: saving a capture into a remote whose raw budget is full 
     REQUIRE(r.library.setButtonSignal(ids.remote, b, big).ok());
   }
   r.library.markClean();
-  open(r, "Herramientas IR");
-  open(r, "Captura RAW");
+  open(r, "Escuchar");
   ReceivedCapture longCap;
   longCap.raw.durationsUs.assign(1000, 500);  // stored twice (frame + original) -> over the remote budget
   r.rx.push(longCap);
   r.advance(100);
-  REQUIRE(r.learn.state() == LearnState::Captured);
+  r.press(Key::Ok);  // stop listening
+  REQUIRE(r.shows("Capturas: 1"));
+  r.press(Key::Ok);  // menu of capture #1
   CHECK(open(r, "Guardar en botón"));
   open(r, "Sala");
   open(r, "Power");
   CHECK(r.shows("Límite"));
-  CHECK(r.learn.state() == LearnState::Captured);  // nothing was lost
+  r.press(Key::Left);
+  r.press(Key::Left);
+  r.press(Key::Left);
+  CHECK(r.topId() == std::string("listen"));
+  CHECK(r.shows("Capturas: 1"));  // nothing was lost
   CHECK_FALSE(r.library.findButton(ids.remote, ids.button)->signal.has_value());
 }
 
@@ -131,7 +137,8 @@ TEST_CASE("scenario ui: the exploration log of the previous run can be read on t
 TEST_CASE("scenario ui: event log and boot history screens") {
   UiRig r;
   r.info.bootLines = {"#3 BROWNOUT", "#2 encendido"};
-  open(r, "Herramientas IR");
+  open(r, "Configuración");
+  open(r, "Diagnóstico");
   open(r, "Registro de eventos");
   CHECK(r.shows("(sin eventos)"));
   r.press(Key::Left);
@@ -148,7 +155,8 @@ TEST_CASE("scenario ui: event log and boot history screens") {
   open(r, "Sala");
   r.press(Key::Ok);  // send -> logged
   r.longPress(Key::Left);
-  open(r, "Herramientas IR");
+  open(r, "Configuración");
+  open(r, "Diagnóstico");
   open(r, "Registro de eventos");
   CHECK(r.shows("tx: started"));
   r.press(Key::Left);

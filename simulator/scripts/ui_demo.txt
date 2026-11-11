@@ -22,12 +22,8 @@ screen
 # back home, then Herramientas IR > Últimas capturas
 key left long
 key down
-key down
-key down
+key right
 key ok
-key down
-key down
-key down
 key ok
 screen
 key left long

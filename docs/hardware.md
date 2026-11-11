@@ -32,7 +32,7 @@ receivers). Verify against your board's silkscreen: 30-pin boards differ.
 
 ## Buttons
 
-Each button between its GPIO and GND (internal pull-up). Use *Configuración > Prueba de botones* to
+Each button between its GPIO and GND (internal pull-up). Use *Configuración > Diagnóstico > Prueba de botones* to
 check all five: it shows the live level of every key and the last event (short / long press).
 
 ## Stage 5 checks to run on the board (in this order; stop at the first surprise)
@@ -41,12 +41,12 @@ check all five: it shows the live level of every key and the last event (short /
    shows `Flash nK/nK`). If it says `FLASH NO MONTADA` the partition is unformatted: format from that screen.
    Power-cut test of the atomic write: save repeatedly while removing power at random moments; after each
    boot the library must load from the current or the backup index (the boot toast says which). Note the
-   `Heap` line in *Diagnóstico HW* before and after: it is the real number behind the memory budget.
-   *Herramientas IR > Historial arranques* lists the last reset reasons (BROWNOUT, WDT, PANIC...).
-2. **Receiver only** (emitter not connected): *Herramientas IR > Captura RAW*, point a known remote at the
+   `Heap` line in *Configuración > Diagnóstico > Estado* before and after: it is the real number behind the memory budget.
+   *Configuración > Diagnóstico > Historial arranques* lists the last reset reasons (BROWNOUT, WDT, PANIC...).
+2. **Receiver only** (emitter not connected): *Escuchar*, point a known remote at the
    TSOP, press a key. Expect `Reconocida` for NEC/Samsung/Sony/RC5/JVC remotes and RAW otherwise. Holding
    the key must not produce a second capture. Compare the decoded address/command with documentation for
-   that remote when available. Check *Diagnóstico HW* counters (`RX vistos`).
+   that remote when available. Check the *Configuración > Diagnóstico > Estado* counters (`RX vistos`).
 3. **Emitter, no LED**: connect only the MOSFET gate to a scope/logic analyser or a multimeter in AC mode and send
    a code: the gate must be low at boot, show bursts only while sending, and end low. Check that a mark never
    exceeds 25 ms and that *Cancelar* stops between frames.
@@ -54,5 +54,5 @@ check all five: it shows the live level of every key and the last event (short /
    LED's measured forward voltage. See the LED glow with a phone camera. Do not add LEDs or raise limits yet.
 5. **Self-capture**: with the emitter on, point it at the TSOP and compare what is captured against what was
    stored (the receiver is muted while sending, so do this with a second capture after the send).
-6. **Power**: watch *Diagnóstico HW > Reinicio* after repeated sends; a `BROWNOUT` reset means the supply sags
+6. **Power**: watch *Configuración > Diagnóstico > Estado* (`Reinicio`) after repeated sends; a `BROWNOUT` reset means the supply sags
    during emission (bulk capacitor, separate IR rail).

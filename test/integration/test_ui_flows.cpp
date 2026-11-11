@@ -19,7 +19,7 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   CHECK(r.topId() == std::string("home"));
   // Icon grid: one 16x16 icon per entry, a frame on the selected one, only its name as text, battery in the title bar.
   CHECK(r.display.shownBitmaps() == 6);
-  CHECK(r.display.shownShapes() == 2 + 2);  // title bar + selection frame + the two page dots (10 icons, 6 per page)
+  CHECK(r.display.shownShapes() == 2);  // title bar + selection frame (six icons: one page, no page dots)
   CHECK(isSelected(r.screen(), "Controles"));
   CHECK_FALSE(r.shows("Aprender señal"));
   CHECK(r.shows("Bat n/d"));  // no measurement circuit: never an invented percentage
@@ -27,7 +27,7 @@ TEST_CASE("scenario ui: home screen, wrap-around navigation and long-press back"
   CHECK(isSelected(r.screen(), "Aprender señal"));
   r.press(Key::Left);
   CHECK(isSelected(r.screen(), "Controles"));
-  r.press(Key::Left);         // wraps to the last of the ten
+  r.press(Key::Left);         // wraps to the last of the six
   CHECK(isSelected(r.screen(), "Configuración"));
   r.press(Key::Right);
   r.press(Key::Down);         // a whole row down: 0 -> 3
@@ -51,14 +51,15 @@ TEST_CASE("scenario ui: with a battery reading the title shows an estimate and t
   CHECK_FALSE(r.shows("~"));
   CHECK_FALSE(r.shows("3.87 V"));      // the exact voltage is on the diagnostics page
   CHECK_FALSE(r.shows("Bat n/d"));
-  CHECK(r.display.shownShapes() == 2 + 2 + 1 + 1 + 4);  // title bar + frame, page dots, outline, nub, four bars (3.87 V is about 77 %)
+  CHECK(r.display.shownShapes() == 2 + 1 + 1 + 4);  // title bar + frame, outline, nub, four bars
 }
 
 TEST_CASE("scenario ui: the diagnostics page gives the exact voltage and the estimate") {
   UiRig r;
   r.battery.set(3770);
-  CHECK(open(r, "Herramientas IR"));
-  CHECK(open(r, "Diagnóstico HW"));
+  CHECK(open(r, "Configuración"));
+  CHECK(open(r, "Diagnóstico"));
+  CHECK(open(r, "Estado"));
   CHECK(r.shows("3.77 V"));
   CHECK(r.shows("Nivel est.: ~"));
 }
@@ -388,21 +389,6 @@ TEST_CASE("scenario ui: move a remote to another category") {
   CHECK(r.library.findRemote(ids.remote)->categoryId == other);
 }
 
-TEST_CASE("scenario ui: create control from the home screen, with a new category") {
-  UiRig r;
-  CHECK(open(r, "Crear control"));
-  typeText(r, "Equipo");
-  CHECK(r.shows("+ Nueva categoría"));
-  CHECK(open(r, "+ Nueva categoría"));
-  typeText(r, "Audio");
-  REQUIRE(r.library.data().remotes.size() == 1);
-  CHECK(r.library.data().remotes[0].name == "Equipo");
-  CHECK(r.library.data().categories[0].name == "Audio");
-  CHECK(r.topId() == std::string("remote"));
-  r.press(Key::Left);
-  CHECK(r.topId() == std::string("home"));
-}
-
 TEST_CASE("scenario ui: create a manual signal with the form and number editor") {
   UiRig r;
   Ids ids = seed(r);
@@ -461,60 +447,64 @@ TEST_CASE("scenario ui: manual form follows the protocol (bit options, field wid
   CHECK(r.shows("Toggle"));    // only protocols with a toggle bit show it
 }
 
-TEST_CASE("scenario ui: tools - receiver info, diagnostics and capture history") {
+TEST_CASE("scenario ui: diagnostics live under settings, the capture history under the IR tools") {
   UiRig r;
-  open(r, "Herramientas IR");
-  open(r, "Info del receptor");
-  CHECK(r.shows("TSOP38238"));
-  CHECK(r.shows("detenido"));
-  r.press(Key::Left);
-  open(r, "Diagnóstico HW");
+  open(r, "Configuración");
+  open(r, "Diagnóstico");
+  CHECK(r.topId() == std::string("diagnostics-menu"));
+  open(r, "Estado");
   CHECK(r.shows("Pantalla: OK"));
   CHECK(r.shows("Batería: n/d"));
   CHECK(r.shows("Receptor: detenido"));
   CHECK(r.shows("Emisor: reposo"));
+  r.press(Key::Left);
+  open(r, "Info del equipo");
+  CHECK(r.shows("Firmware: sim"));
   r.longPress(Key::Left);
 
   open(r, "Herramientas IR");
   open(r, "Últimas capturas");
   CHECK(r.shows("Sin capturas"));
-  r.press(Key::Left);
-  open(r, "Reproducir RAW");
-  CHECK(r.shows("Sin capturas"));
   CHECK(r.tx.history().empty());
 }
 
-TEST_CASE("scenario ui: raw capture tool records history and replays RAW only after confirmation") {
+TEST_CASE("scenario ui: each action has one place - the home has no shortcuts into Controles") {
   UiRig r;
+  for (const char* gone : {"Crear control", "Modo loop", "Modo loco", "Importar"}) {
+    INFO(gone);
+    CHECK_FALSE(select(r, gone));
+  }
   open(r, "Herramientas IR");
-  open(r, "Captura RAW");
-  CHECK(r.topId() == std::string("raw-capture"));
+  for (const char* gone : {"Captura RAW", "Reproducir RAW", "Info del receptor", "Diagnóstico HW"}) {
+    INFO(gone);
+    CHECK_FALSE(r.shows(gone));
+  }
+}
+
+TEST_CASE("scenario ui: a capture is kept in the history and its RAW is replayed only after confirmation") {
+  UiRig r;
+  open(r, "Escuchar");
   r.rx.push(necCapture());
   r.advance(100);
-  CHECK(r.shows("Reconocida"));
-  CHECK(open(r, "Reproducir"));
-  CHECK(r.shows("Enviando"));
-  r.advance(300);
-  REQUIRE(r.tx.history().size() == 1);
-  CHECK(r.tx.history()[0].job.signal.initial[0].kind == Frame::Kind::Raw);
-  CHECK(r.tx.history()[0].job.signal.initial[0].raw.carrierHz == 0);  // unknown, transmitter default applies
   r.longPress(Key::Left);
 
   open(r, "Herramientas IR");
   open(r, "Últimas capturas");
   CHECK(r.shows("#1 NEC"));
-  r.press(Key::Left);
-  open(r, "Reproducir RAW");
+  r.press(Key::Ok);
   CHECK(r.topId() == std::string("capture-detail"));
+  CHECK(r.shows("Reconocida"));
   r.press(Key::Ok);  // asks first
   CHECK(r.topId() == std::string("confirm"));
   CHECK(r.shows("38 kHz"));
   r.press(Key::Left);
-  CHECK(r.tx.history().size() == 1);  // declined: nothing more sent
+  CHECK(r.tx.history().empty());  // declined: nothing sent
   r.press(Key::Ok);
   r.press(Key::Ok);
   r.advance(300);
-  CHECK(r.tx.history().size() == 2);
+  REQUIRE(r.tx.history().size() == 1);
+  CHECK(r.tx.history()[0].job.signal.initial[0].kind == Frame::Kind::Raw);
+  CHECK(r.tx.history()[0].job.signal.initial[0].raw.carrierHz == 0);  // unknown, transmitter default applies
 }
 
 TEST_CASE("scenario ui: exploration runs a small plan to completion and logs it") {
@@ -615,6 +605,7 @@ TEST_CASE("scenario ui: settings are applied and persisted") {
 TEST_CASE("scenario ui: button test screen shows live raw levels and last event") {
   UiRig r;
   open(r, "Configuración");
+  open(r, "Diagnóstico");
   open(r, "Prueba de botones");
   CHECK(r.topId() == std::string("button-test"));
   r.buttons.set(Key::Right, true);
@@ -627,7 +618,7 @@ TEST_CASE("scenario ui: button test screen shows live raw levels and last event"
   CHECK(r.topId() == std::string("button-test"));
   CHECK(r.shows("Izquierda pulso"));
   r.longPress(Key::Left);
-  CHECK(r.topId() == std::string("settings"));
+  CHECK(r.topId() == std::string("diagnostics-menu"));
 }
 
 TEST_CASE("scenario ui: storage page and wipe-all with confirmation") {
@@ -734,8 +725,9 @@ TEST_CASE("scenario ui: a flash that could not be mounted is flagged and formatt
 TEST_CASE("scenario ui: adapter counters appear in the diagnostics page") {
   UiRig r;
   r.info.adapterCounters = []() { return std::vector<std::string>{"RX vistos:3 rep:1", "TX ok:2 canc:0 rech:1"}; };
-  open(r, "Herramientas IR");
-  open(r, "Diagnóstico HW");
+  open(r, "Configuración");
+  open(r, "Diagnóstico");
+  open(r, "Estado");
   for (int i = 0; i < 4; ++i) r.press(Key::Down);
   CHECK(r.shows("RX vistos:3 rep:1"));
   CHECK(r.shows("TX ok:2 canc:0 rech:1"));

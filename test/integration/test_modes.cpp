@@ -45,22 +45,19 @@ TEST_CASE("sd controls: the card's folders sit next to the saved categories, and
   CHECK(sentCommand(r, 0) == 8);
 }
 
-TEST_CASE("sd controls: hidden by the setting, and absent without a card") {
+TEST_CASE("sd controls: absent without a card; a control lying directly in /irdb is listed too") {
   UiRig r;
   r.card.add("/irdb/TVs/LG/LG_TV.ir", irFile({{"Power", 8}}));
-  REQUIRE(open(r, "Configuración"));
-  REQUIRE(open(r, "SD en Controles"));
-  CHECK(r.settings.cardInLibrary == false);
-  r.longPress(Key::Left);
+  r.card.add("/irdb/Loose.ir", irFile({{"Power", 9}}));
   REQUIRE(open(r, "Controles"));
-  CHECK_FALSE(r.shows("TVs/"));
+  CHECK(r.shows("TVs/"));
+  REQUIRE(open(r, "Loose"));
+  CHECK(r.topId() == std::string("card-remote"));
   r.longPress(Key::Left);
-  REQUIRE(open(r, "Configuración"));
-  REQUIRE(open(r, "SD en Controles"));
   r.card.setPresent(false);
-  r.longPress(Key::Left);
   REQUIRE(open(r, "Controles"));
   CHECK_FALSE(r.shows("TVs/"));
+  CHECK_FALSE(r.shows("Loose"));
 }
 
 TEST_CASE("sd controls: a card control can be imported from its menu, and saved ones still work as before") {
@@ -80,16 +77,17 @@ TEST_CASE("sd controls: a card control can be imported from its menu, and saved 
   CHECK_FALSE(r.library.dirty());
 }
 
-TEST_CASE("loop: choose a control, mark buttons, set the pause and run; Left stops it") {
+TEST_CASE("loop: from the menu of a control, mark buttons, set the pause and run; Left stops it") {
   UiRig r;
   const Ids ids = seed(r);
   const Id b2 = r.library.addButton(ids.remote, "Vol+").value();
   REQUIRE(r.library.setButtonSignal(ids.remote, ids.button, nec(1, 1)).ok());
   REQUIRE(r.library.setButtonSignal(ids.remote, b2, nec(1, 2)).ok());
   r.library.markClean();
+  REQUIRE(open(r, "Controles"));
+  REQUIRE(open(r, "TV"));
+  r.press(Key::Right);  // menu of the control "Sala"
   REQUIRE(open(r, "Modo loop"));
-  REQUIRE(open(r, "Guardados"));
-  REQUIRE(open(r, "Sala"));
   CHECK(r.topId() == std::string("loop-setup"));
   r.press(Key::Ok);  // "Iniciar" with nothing marked
   CHECK(r.shows("Elija botones"));
@@ -115,24 +113,18 @@ TEST_CASE("loop: choose a control, mark buttons, set the pause and run; Left sto
   CHECK(r.topId() == std::string("loop-setup"));
 }
 
-TEST_CASE("loop: also works on a control read from the card, and from the saved control's menu") {
+TEST_CASE("loop: also works on a control read from the card, from its menu") {
   UiRig r;
   const Ids ids = seed(r);
   REQUIRE(r.library.setButtonSignal(ids.remote, ids.button, nec(1, 1)).ok());
   r.library.markClean();
-  REQUIRE(open(r, "Controles"));
-  REQUIRE(open(r, "TV"));
-  r.press(Key::Right);  // menu of the control "Sala"
-  REQUIRE(open(r, "Modo loop"));
-  CHECK(r.topId() == std::string("loop-setup"));
-  r.longPress(Key::Left);
-
   r.card.add("/irdb/TVs/LG/LG_TV.ir", irFile({{"Power", 8}}));
-  REQUIRE(open(r, "Modo loop"));
-  REQUIRE(open(r, "Tarjeta SD"));
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "TVs/"));
   REQUIRE(open(r, "LG/"));
   REQUIRE(open(r, "LG_TV"));
+  r.press(Key::Right);  // menu of the card control
+  REQUIRE(open(r, "Modo loop"));
   CHECK(r.topId() == std::string("loop-setup"));
   CHECK(r.shows("Power"));
 }
@@ -146,9 +138,10 @@ TEST_CASE("crazy mode: random buttons of the chosen control until stopped") {
   REQUIRE(r.library.setButtonSignal(ids.remote, b2, nec(1, 2)).ok());
   REQUIRE(r.library.setButtonSignal(ids.remote, b3, nec(1, 3)).ok());
   r.library.markClean();
+  REQUIRE(open(r, "Controles"));
+  REQUIRE(open(r, "TV"));
+  r.press(Key::Right);  // menu of the control "Sala"
   REQUIRE(open(r, "Modo loco"));
-  REQUIRE(open(r, "Guardados"));
-  REQUIRE(open(r, "Sala"));
   CHECK(r.topId() == std::string("crazy-setup"));
   REQUIRE(select(r, "Iniciar"));
   r.press(Key::Ok);
@@ -263,7 +256,7 @@ TEST_CASE("import a whole folder: every .ir file inside becomes a control of one
   r.card.add("/irdb/TVs/LG/b.ir", irFile({{"Power", 9}}));
   r.card.add("/irdb/TVs/LG/c.ir", "garbage");
   r.card.add("/irdb/TVs/LG/Sub/d.ir", irFile({{"Power", 10}}));  // not inside the folder itself
-  REQUIRE(open(r, "Importar"));
+  REQUIRE(open(r, "Controles"));
   REQUIRE(open(r, "TVs/"));
   REQUIRE(open(r, "LG/"));
   REQUIRE(open(r, "» Importar carpeta"));
@@ -279,23 +272,24 @@ TEST_CASE("import a whole folder: every .ir file inside becomes a control of one
   CHECK_FALSE(r.library.dirty());  // saved
 }
 
-TEST_CASE("home: ten icons over two pages, with page dots and Up/Down moving between them") {
+TEST_CASE("home: six icons on one page, Up/Down switch between the two rows") {
   UiRig r;
   CHECK(r.display.shownBitmaps() == 6);
   CHECK(isSelected(r.screen(), "Controles"));
-  r.press(Key::Down);   // row 2 of page 1
+  r.press(Key::Down);
   CHECK(isSelected(r.screen(), "Be Gone"));
-  r.press(Key::Down);   // continues on page 2
+  r.press(Key::Down);   // wraps to the first row
+  CHECK(isSelected(r.screen(), "Controles"));
+  r.press(Key::Up);
+  CHECK(isSelected(r.screen(), "Be Gone"));
+  r.press(Key::Right);
+  CHECK(isSelected(r.screen(), "Herramientas IR"));
+  r.press(Key::Right);
+  CHECK(isSelected(r.screen(), "Configuración"));
+  r.press(Key::Right);  // Left/Right walk through all six and wrap
+  CHECK(isSelected(r.screen(), "Controles"));
+  r.press(Key::Right);
+  CHECK(isSelected(r.screen(), "Aprender señal"));
+  r.press(Key::Right);
   CHECK(isSelected(r.screen(), "Escuchar"));
-  CHECK(r.display.shownBitmaps() == 4);
-  r.press(Key::Down);   // row 2 of page 2
-  CHECK(isSelected(r.screen(), "Configuración"));
-  r.press(Key::Down);   // wraps to page 1
-  CHECK(isSelected(r.screen(), "Controles"));
-  r.press(Key::Up);     // and back
-  CHECK(isSelected(r.screen(), "Configuración"));
-  r.press(Key::Right);  // Left/Right walk through all ten, page by page
-  CHECK(isSelected(r.screen(), "Controles"));
-  r.press(Key::Left);
-  CHECK(isSelected(r.screen(), "Configuración"));
 }

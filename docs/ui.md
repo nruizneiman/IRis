@@ -29,28 +29,42 @@ Battery: without a measurement circuit (build without `IRIS_BATTERY_RATIO_PERMIL
 about 0.3 V) the home title bar says `Bat n/d`. With one it shows an **estimated** level, `77%`, plus a battery
 outline with 0-4 bars (4 from 75 %, 3 from 50 %, 2 from 25 %, 1 from 10 %). The estimate comes from a generic
 lithium-ion curve (`app/BatteryLevel.h`, anchor points quoted there, with 4.10 V taken as 100 %), not from this cell, and under load it reads
-low; the exact voltage and the estimate (marked `~`) are on *Herramientas IR > Diagnóstico HW*. The shown number is
+low; the exact voltage and the estimate (marked `~`) are on *Configuración > Diagnóstico > Estado*. The shown number is
 corrected for the voltage lost between the cell and the divider (a fixed 0.11 V measured on this unit, `kBatteryLoadDropMv`) and smoothed (`BatteryEstimator`: one sample every 0.5 s, exponential average, and it moves only when the new value differs
 by 2 points or more) so it does not flicker with ADC noise or transmission dips; after power-on it takes a few
 seconds to settle.
 
 ## Map
 
+One rule decides where things are: **each action has a single place**. What is done to one control, button or category
+is on the Right-key menu of its row in *Controles*; the home screen only holds what does not start from a control.
+
 ```
-Inicio (battery text, "*" = unsaved changes)
-├─ Controles ─ categorías ─ controles ─ botones
-│     OK on a button sends its signal; Right opens: Enviar, Aprender señal, Crear manual,
-│     Renombrar, Borrar señal, Eliminar botón. Right on a control: rename, move, duplicate, delete. Right on a category: rename, delete.
-├─ Aprender señal ─ pick control ─ pick (or create) button ─ wait ─ review ─ Guardar / Probar / Reintentar
-├─ Crear control ─ name ─ category (or new) ─ opens the empty control
+Inicio (six icons on one page; battery text, "*" = unsaved changes)
+├─ Controles ─ categorías ─ controles ─ botones          (and the card's folders, marked SD)
+│     OK on a button sends its signal.
+│     Right on a button:   Enviar, Aprender señal, Crear manual, Renombrar, Borrar señal, Eliminar botón
+│     Right on a control:  Renombrar, Cambiar categoría, Duplicar, Exportar a SD, Modo loop, Modo loco, Eliminar
+│     Right on a category: Renombrar, Exportar a SD, Eliminar
+│     Last row of each list: + Nueva categoría / + Nuevo control / + Nuevo botón
+│     A card folder: » Importar carpeta, subfolders, controls. A card control opens read-only (OK sends);
+│     Right on it: Importar, Modo loop, Modo loco.
+├─ Aprender señal ─ pick control ─ pick (or create) button ─ wait ─ review ─ Guardar / Probar envío / Reintentar
+├─ Escuchar ─ keeps capturing until OK; each capture: Reproducir, Guardar en botón, Detalle, Eliminar
+├─ Be Gone ─ Apagar / Encender, pause ─ category or card folder ─ confirm ─ run
 ├─ Herramientas IR
-│     Info del receptor · Captura RAW (reproducir / guardar en botón) · Reproducir RAW (asks first)
-│     Últimas capturas (8, RAM only) · Diagnóstico HW · Exploración de códigos (+ registro previo)
-│     Registro de eventos · Historial arranques
+│     Últimas capturas (8, RAM only; OK replays the RAW after asking) · Exploración (+ registro previo)
+│     Exportar todo a SD
 └─ Configuración
-      Invertir video · Espera captura (5/10/15/30 s) · Prueba de botones · Info del equipo
-      Diagnóstico · Almacenamiento (counts, wipe-all with confirmation)
+      Idioma · Invertir video · Espera captura (5/10/15/30 s) · Almacenamiento (counts, wipe-all with confirmation)
+      Diagnóstico: Estado · Info del equipo · Prueba de botones · Registro de eventos · Historial arranques
 ```
+
+Removed in the 2026-11 clean-up because another entry already did the same: the home icons *Crear control* (use
+*+ Nuevo control* inside a category), *Modo loop* / *Modo loco* (menu of a control) and *Importar* (the card's folders in
+*Controles*); *Captura RAW* (*Escuchar* captures, replays and saves), *Reproducir RAW* (first row of *Últimas capturas*),
+*Info del receptor*, the second *Diagnóstico* entry, and the setting *SD en Controles* (the card's folders are always
+listed when a card is in).
 
 Rules enforced by the UI: every delete asks for confirmation (`OK` = yes, anything else = no);
 a long exploration (> 50 codes) asks again and says the emitter cannot know whether the target
@@ -60,7 +74,7 @@ which screen is visible; display failures never block the logic (the picture is 
 ## Limits of the on-device UI
 
 - **RAW signals cannot be typed in on the device** (hundreds of durations). Create them by capturing
-  (Captura RAW / Aprender) or, in the future, with an external editing tool. The domain and the
+  (Escuchar / Aprender) or, in the future, with an external editing tool. The domain and the
   simulator (`manual-raw`) support them already.
 - Text entry is a character picker (slow by design); names are limited to 20 UTF-8 bytes.
 - Only one capture and one transmission at a time; receiver 2 is not enabled.
@@ -87,7 +101,7 @@ used, all code and icons here are original).
 
 ## Language
 
-English is the default; Spanish is selectable in *Settings > Language* and is saved with the settings (`lang=` line).
+English is the default; Spanish is selectable in *Settings > Language* (the first row of the settings) and is saved with the settings (`lang=` line).
 The screens are written with Spanish text and translated when drawn (`ui/I18n.h`, catalog Spanish -> English; unknown text
 is shown as written). Consequence: names the user typed or imported are never translated, except that a name equal to a
 catalog entry (for example a category called "Controles") is shown translated. The scripted tests run in Spanish
@@ -97,24 +111,24 @@ screen needs its strings added to the catalog.
 
 ## Modes and the card (2026-11)
 
-The home screen is an icon grid of ten entries over two pages (six per page, one dot per page in the bottom-right corner;
-Up/Down go from the last row of a page to the next, Left/Right walk through all of them): Controles, Aprender señal, Crear
-control, Be Gone, Modo loco, Modo loop, Escuchar, Importar, Herramientas IR, Configuración.
+The home screen is an icon grid of six entries on one page (Up/Down switch between the two rows, Left/Right walk
+through all of them): Controles, Aprender señal, Escuchar, Be Gone, Herramientas IR, Configuración. The grid still pages
+by itself (six per page, one dot per page) if more entries are ever added.
 
-**Controls from the card, alone or with the saved ones.** A card control is read from its `.ir` file when it is opened and
+**Controls from the card, next to the saved ones.** A card control is read from its `.ir` file when it is opened and
 never stored (`app/RemoteView.h`: a saved control and a card control are both a `RemoteView`, and the modes only see that).
-- *Controles* lists the saved categories and, marked `SD`, the card's top-level folders (setting *SD en Controles*, on by
-  default; it disappears with no card). A card control opens read-only: OK sends a button, Right opens a menu (Import, Loop,
-  Crazy).
-- *Importar* keeps working as before, and now also has `» Importar carpeta` inside each folder: every `.ir` file directly in
-  it becomes a saved control, in a new category named after the folder or an existing one, a file per tick so Left can stop it.
-- Every mode asks "Guardados / Tarjeta SD" first, so saved and card controls can be used in any of them.
+- *Controles* lists the saved categories and, marked `SD`, what is in `/irdb` on the card: its top-level folders and any
+  control lying directly in it. Without a card they are not listed. A card control opens read-only: OK sends a button,
+  Right opens a menu (Importar, Modo loop, Modo loco) that also says how many buttons of the file could not be used.
+- Importing is done from there, so a control can be tried before it is imported. *» Importar carpeta*, the first row of
+  every card folder, turns every `.ir` file directly in it into a saved control, in a new category named after the folder
+  or an existing one, a file per tick so Left can stop it.
 
 **Modes** (all send through `TransmitService`, so the emitter limits apply; none sends before its screen is opened and the
 user chooses to start; Left stops, leaving the screen stops, and the pause between sends is never below 100 ms):
-- *Modo loop*: mark the buttons (the mark shows the order), choose the pause (0.2 s to 60 s), start; the sequence repeats until
+- *Modo loop* (menu of a control): mark the buttons (the mark shows the order), choose the pause (0.2 s to 60 s), start; the sequence repeats until
   stopped.
-- *Modo loco*: random buttons of one control, sometimes the same one two or three times in a row; the pause varies between
+- *Modo loco* (menu of a control): random buttons of one control, sometimes the same one two or three times in a row; the pause varies between
   0.5x and 1.5x the chosen one.
 - *Be Gone*: choose Apagar or Encender, then a saved category or a card folder (subfolders included), confirm, and it sends the
   power button of each control (an explicit off / on button when there is one, else the toggle). A code already sent in the run
@@ -131,4 +145,4 @@ in RAM); a card control up to 512 buttons, from a file of at most 64 KB. These a
 files to `/iris/export/<category>/<control>.ir` (`import/FlipperIrWriter.h`, the mirror of the importer: NEC / NECext,
 Samsung32, SIRC / SIRC15 / SIRC20 and raw; other decoded protocols and empty buttons are counted and left out). Names keep
 ASCII only (any other character becomes `_`). A file is written under a temporary name and renamed. Re-importing them goes
-through the same card browser once the folder is copied under `/irdb`.
+through *Controles* once the folder is copied under `/irdb`.

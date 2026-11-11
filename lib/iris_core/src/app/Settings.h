@@ -14,7 +14,6 @@ struct Settings {
   bool invertDisplay = false;
   uint8_t captureTimeoutSec = 15;  // one of 5, 10, 15, 30
   Lang language = kDefaultLang;
-  bool cardInLibrary = true;  // list the card's folders next to the saved categories in Controles
 
   static bool validTimeout(unsigned s) { return s == 5 || s == 10 || s == 15 || s == 30; }
 };

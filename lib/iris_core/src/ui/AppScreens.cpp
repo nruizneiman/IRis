@@ -12,7 +12,6 @@
 #include "domain/Limits.h"
 #include "domain/Naming.h"
 #include "domain/SignalValidation.h"
-#include "import/FlipperIr.h"
 #include "ui/I18n.h"
 #include "ui/ModuleScreens.h"
 #include "ui/ScreenKit.h"
@@ -180,8 +179,6 @@ P makeLibraryScreen();
 P makeCategoryScreen(Id cat);
 P makeRemoteScreen(Id remote);
 P makeButtonMenu(Id remote, Id button);
-P makeToolsScreen();
-P makeSettingsScreen();
 P makeDiagnosticsScreen();
 
 // Picks a destination button. `extraPops` is 1 when a text editor is on top of the picker (new button).
@@ -225,14 +222,11 @@ P makeDiagnosticsScreen() { return std::make_unique<InfoScreen>("diagnostics", "
 
 // ---------------------------------------------------------------- learn / raw capture
 
-enum class LearnMode { Learn, Raw };
-
 class LearnScreen : public Screen {
  public:
-  LearnScreen(LearnMode mode, Id remote, Id button, int returnPops)
-      : mode_(mode), remote_(remote), button_(button), pops_(returnPops) {}
+  LearnScreen(Id remote, Id button, int returnPops) : remote_(remote), button_(button), pops_(returnPops) {}
 
-  const char* id() const override { return mode_ == LearnMode::Learn ? "learn" : "raw-capture"; }
+  const char* id() const override { return "learn"; }
   void onEnter(UiContext& c) override { begin(c); }
   void onExit(UiContext& c) override { c.learn.cancel(); }
 
@@ -240,7 +234,7 @@ class LearnScreen : public Screen {
     const bool press = e.action == KeyAction::Press;
     const LearnState st = c.learn.state();
     if (st == LearnState::Captured) {
-      const size_t n = actionCount();
+      const size_t n = kActionCount;
       if ((e.key == Key::Up || e.key == Key::Down) && e.action != KeyAction::LongPress) {
         sel_ = (e.key == Key::Down) ? (sel_ + 1) % n : (sel_ + n - 1) % n;
         return Nav::none();
@@ -256,7 +250,7 @@ class LearnScreen : public Screen {
   }
 
   void render(UiContext& c, Painter& p) override {
-    p.title(mode_ == LearnMode::Learn ? "Aprender: " + buttonName(c, remote_, button_) : std::string("Captura RAW"));
+    p.title("Aprender: " + buttonName(c, remote_, button_));
     switch (c.learn.state()) {
       case LearnState::Armed: {
         const uint32_t elapsed = c.clock.nowMs() - startMs_;
@@ -274,9 +268,9 @@ class LearnScreen : public Screen {
         if (got.quality.possibleNoise) lines[0] += " (ruido)";
         if (got.quality.truncated) lines[0] += " (trunc.)";
         for (size_t i = 0; i < lines.size() && i < 3; ++i) p.text(0, 1 + static_cast<int>(i), lines[i]);
-        const std::vector<std::string> names = actionNames();
-        for (size_t i = 0; i < names.size(); ++i) p.item(4 + static_cast<int>(i), names[i], "", i == sel_);
-        p.footer(mode_ == LearnMode::Raw && c.learn.result()->quality.truncated ? "¡Truncada!" : "OK:elegir Izq:salir");
+        static const char* const names[kActionCount] = {"Guardar", "Probar envío", "Reintentar"};
+        for (size_t i = 0; i < kActionCount; ++i) p.item(4 + static_cast<int>(i), names[i], "", i == sel_);
+        p.footer("OK:elegir Izq:salir");
         break;
       }
       case LearnState::Rejected:
@@ -308,45 +302,20 @@ class LearnScreen : public Screen {
     Status st = c.learn.start(static_cast<uint32_t>(c.settings.captureTimeoutSec) * 1000u);
     if (!st.ok()) c.toast(spanishError(st));
   }
-  size_t actionCount() const { return 3; }
-  std::vector<std::string> actionNames() const {
-    return mode_ == LearnMode::Learn ? std::vector<std::string>{"Guardar", "Probar envío", "Reintentar"}
-                                     : std::vector<std::string>{"Reproducir", "Guardar en botón", "Reintentar"};
-  }
+  static constexpr size_t kActionCount = 3;
   Nav runAction(UiContext& c) {
     const IrSignal& sig = *c.learn.result();
-    if (mode_ == LearnMode::Learn) {
-      if (sel_ == 0) {
-        Status st = c.library.setButtonSignal(remote_, button_, sig);
-        if (!finishChange(c, st, "Señal guardada")) return Nav::none();
-        c.learn.take();
-        return Nav::pop(pops_);
-      }
-      if (sel_ == 1) {
-        sendSignal(c, sig);
-        return Nav::none();
-      }
-    } else if (sel_ == 0) {
-      sendSignal(c, rawReplay(sig));
-      return Nav::none();
-    } else if (sel_ == 1) {
-      // The pickers sit on top of this screen, so the capture stays available until it is saved.
-      return Nav::push(makeRemotePicker("Guardar en: control", [](UiContext& c2, Id remote, Id button, int extra) {
-        if (!c2.learn.result()) {
-          c2.toast("Sin captura");
-          return Nav::none();
-        }
-        Status st = c2.library.setButtonSignal(remote, button, *c2.learn.result());
-        if (!finishChange(c2, st, "Señal guardada")) return Nav::none();
-        c2.learn.take();
-        return Nav::pop(3 + extra);  // button picker, control picker, this capture screen
-      }));
+    if (sel_ == 0) {
+      Status st = c.library.setButtonSignal(remote_, button_, sig);
+      if (!finishChange(c, st, "Señal guardada")) return Nav::none();
+      c.learn.take();
+      return Nav::pop(pops_);
     }
-    begin(c);  // "Reintentar"
+    if (sel_ == 1) sendSignal(c, sig);
+    else begin(c);  // "Reintentar"
     return Nav::none();
   }
 
-  LearnMode mode_;
   Id remote_, button_;
   int pops_;
   size_t sel_ = 0;
@@ -355,19 +324,36 @@ class LearnScreen : public Screen {
 
 // ---------------------------------------------------------------- manual signal creation
 
-void syncManualForm(FormScreen& f, size_t changed) {
+// The manual-signal and exploration forms both start with "Protocolo" (field 0) and "Bits" (field 1).
+std::vector<std::string> protocolNames() {
+  std::vector<std::string> names;
+  for (size_t i = 0; i < protocolCount(); ++i) names.push_back(protocolAt(i)->displayName);
+  return names;
+}
+
+// Rebuilds the bit-count options when the protocol changed and returns the chosen variant (null: no protocol).
+const ProtocolVariant* syncProtocolFields(FormScreen& f, size_t changed) {
   const ProtocolInfo* info = protocolAt(f.field(0).choice);
-  if (!info) return;
-  if (changed == 0) {  // protocol changed: rebuild the bit-count options
+  if (!info) return nullptr;
+  if (changed == 0) {
     f.field(1).options.clear();
     for (uint8_t i = 0; i < info->variantCount; ++i) f.field(1).options.push_back(numStr(info->variants[i].bits));
     f.field(1).choice = 0;
   }
-  const ProtocolVariant& v = info->variants[f.field(1).choice];
-  f.field(2).max = maskForBits(v.addressBits);
-  f.field(3).max = maskForBits(v.commandBits);
-  if (f.field(2).number > f.field(2).max) f.field(2).number = f.field(2).max;
-  if (f.field(3).number > f.field(3).max) f.field(3).number = f.field(3).max;
+  return &info->variants[f.field(1).choice];
+}
+
+void limitField(FormField& field, uint32_t max) {
+  field.max = max;
+  if (field.number > max) field.number = max;
+}
+
+void syncManualForm(FormScreen& f, size_t changed) {
+  const ProtocolVariant* v = syncProtocolFields(f, changed);
+  if (!v) return;
+  const ProtocolInfo* info = protocolAt(f.field(0).choice);
+  limitField(f.field(2), maskForBits(v->addressBits));
+  limitField(f.field(3), maskForBits(v->commandBits));
   f.field(4).visible = info->hasToggle;
   if (!info->hasToggle) f.field(4).choice = 0;
 }
@@ -381,9 +367,7 @@ Result<IrSignal> manualFromForm(const FormScreen& f) {
 
 P makeManualForm(Id remote, Id button) {
   auto form = std::make_unique<FormScreen>("manual-signal", "Señal manual");
-  std::vector<std::string> names;
-  for (size_t i = 0; i < protocolCount(); ++i) names.push_back(protocolAt(i)->displayName);
-  form->addChoice("Protocolo", names);
+  form->addChoice("Protocolo", protocolNames());
   form->addChoice("Bits", {"32"});
   form->addNumber("Dirección", 0, 0, 0xFF, 16);
   form->addNumber("Comando", 0, 0, 0xFF, 16);
@@ -423,7 +407,7 @@ P makeButtonMenu(Id remote, Id button) {
         std::vector<ListItem> it;
         it.push_back({"Enviar", "", [remote, button](UiContext& cc) { sendButton(cc, remote, button); return Nav::none(); }});
         it.push_back({"Aprender señal", "", [remote, button](UiContext&) {
-                        return Nav::push(std::make_unique<LearnScreen>(LearnMode::Learn, remote, button, 2));
+                        return Nav::push(std::make_unique<LearnScreen>(remote, button, 2));
                       }});
         it.push_back({"Crear manual", "", [remote, button](UiContext&) { return Nav::push(makeManualForm(remote, button)); }});
         it.push_back({"Renombrar", "", [remote, button](UiContext& cc) {
@@ -651,7 +635,7 @@ P makeLibraryScreen() {
   return list;
 }
 
-// ---------------------------------------------------------------- learn (from home) and create remote
+// ---------------------------------------------------------------- learn (from home)
 
 P makeButtonPicker(Id remote, PickFn onPick) {
   auto list = std::make_unique<ListScreen>("pick-button", "Botón destino", [remote, onPick](UiContext& c) {
@@ -696,46 +680,8 @@ P makeRemotePicker(const std::string& title, PickFn onPick) {
 
 P makeLearnTargetPicker() {
   return makeRemotePicker("Aprender: control", [](UiContext&, Id remote, Id button, int) {
-    return Nav::push(std::make_unique<LearnScreen>(LearnMode::Learn, remote, button, 3));
+    return Nav::push(std::make_unique<LearnScreen>(remote, button, 3));
   });
-}
-
-// Create remote: name -> category -> new (empty) remote opened on top of home.
-P makeCreateRemote() {
-  return withPresets(std::make_unique<TextInputScreen>("Nuevo control", "", limits::kMaxNameBytes, [](UiContext& c0, const std::string& rawName) {
-    const std::string name = trimName(rawName);
-    Status nameOk = validateName(name);
-    if (!nameOk.ok()) {
-      c0.toast(spanishError(nameOk));
-      return Nav::none();
-    }
-    auto picker = std::make_unique<ListScreen>("create-pick-category", "Categoría", [name](UiContext& c) {
-      std::vector<ListItem> it;
-      for (const Category& cat : c.library.data().categories) {
-        const Id cid = cat.id;
-        it.push_back({cat.name, "", [name, cid](UiContext& c2) {
-                        auto r = c2.library.addRemote(name, cid);
-                        if (!finishChange(c2, r.ok() ? Status::success() : r.status(), "Control creado")) return Nav::none();
-                        return Nav::homeThen(makeRemoteScreen(r.value()));
-                      }});
-      }
-      it.push_back({"+ Nueva categoría", "", [name](UiContext&) {
-                      return Nav::push(withPresets(std::make_unique<TextInputScreen>(
-                          "Nueva categoría", "", limits::kMaxNameBytes, [name](UiContext& c2, const std::string& catName) {
-                            auto cat = c2.library.addCategory(catName);
-                            if (!cat.ok()) {
-                              c2.toast(spanishError(cat.status()));
-                              return Nav::none();
-                            }
-                            auto r = c2.library.addRemote(name, cat.value());
-                            if (!finishChange(c2, r.ok() ? Status::success() : r.status(), "Control creado")) return Nav::none();
-                            return Nav::homeThen(makeRemoteScreen(r.value()));
-                          }), categoryPresets()));
-                    }});
-      return it;
-    });
-    return Nav::replace(std::move(picker));
-  }), remotePresets());
 }
 
 // ---------------------------------------------------------------- tools
@@ -841,22 +787,10 @@ P makeExplorationRun() {
 }
 
 void syncExploreForm(FormScreen& f, size_t changed) {
-  const ProtocolInfo* info = protocolAt(f.field(0).choice);
-  if (!info) return;
-  if (changed == 0) {
-    f.field(1).options.clear();
-    for (uint8_t i = 0; i < info->variantCount; ++i) f.field(1).options.push_back(numStr(info->variants[i].bits));
-    f.field(1).choice = 0;
-  }
-  const ProtocolVariant& v = info->variants[f.field(1).choice];
-  for (size_t i : {2u, 3u}) {  // address from / to
-    f.field(i).max = maskForBits(v.addressBits);
-    if (f.field(i).number > f.field(i).max) f.field(i).number = f.field(i).max;
-  }
-  for (size_t i : {4u, 5u}) {  // command from / to
-    f.field(i).max = maskForBits(v.commandBits);
-    if (f.field(i).number > f.field(i).max) f.field(i).number = f.field(i).max;
-  }
+  const ProtocolVariant* v = syncProtocolFields(f, changed);
+  if (!v) return;
+  for (size_t i : {2u, 3u}) limitField(f.field(i), maskForBits(v->addressBits));  // address from / to
+  for (size_t i : {4u, 5u}) limitField(f.field(i), maskForBits(v->commandBits));  // command from / to
 }
 
 ExplorationPlan planFromForm(const FormScreen& f) {
@@ -875,9 +809,7 @@ ExplorationPlan planFromForm(const FormScreen& f) {
 
 P makeExplorationForm() {
   auto form = std::make_unique<FormScreen>("explore-form", "Exploración");
-  std::vector<std::string> names;
-  for (size_t i = 0; i < protocolCount(); ++i) names.push_back(protocolAt(i)->displayName);
-  form->addChoice("Protocolo", names);
+  form->addChoice("Protocolo", protocolNames());
   form->addChoice("Bits", {"32"});
   form->addNumber("Dir desde", 0, 0, 0xFF, 16);
   form->addNumber("Dir hasta", 0, 0, 0xFF, 16);
@@ -921,28 +853,6 @@ P makeExplorationForm() {
 P makeToolsScreen() {
   return std::make_unique<ListScreen>("tools", "Herramientas IR", [](UiContext&) {
     std::vector<ListItem> it;
-    it.push_back({"Info del receptor", "", [](UiContext&) {
-                    return Nav::push(std::make_unique<InfoScreen>("rx-info", "Receptor IR", [](UiContext& c) {
-                      std::vector<std::string> l;
-                      l.push_back("Receptor 1: TSOP38238");
-                      l.push_back(std::string("Estado: ") + (c.receiver.running() ? "activo" : "detenido"));
-                      l.push_back("Entrega señal ya");
-                      l.push_back("demodulada: no se");
-                      l.push_back("mide la portadora.");
-                      l.push_back("Receptor 2: apagado");
-                      l.push_back("Capturas en RAM: " + numStr(c.captures.size()));
-                      l.push_back("IR: " + c.info.irLibrary);
-                      return l;
-                    }));
-                  }});
-    it.push_back({"Captura RAW", "", [](UiContext&) { return Nav::push(std::make_unique<LearnScreen>(LearnMode::Raw, 0, 0, 1)); }});
-    it.push_back({"Reproducir RAW", "", [](UiContext& c) {
-                    if (c.captures.empty()) {
-                      c.toast("Sin capturas aún");
-                      return Nav::none();
-                    }
-                    return Nav::push(makeCaptureDetail(c.captures.front()));
-                  }});
     it.push_back({"Últimas capturas", "", [](UiContext&) {
                     auto list = std::make_unique<ListScreen>("captures", "Últimas capturas", [](UiContext& c) {
                       std::vector<ListItem> items;
@@ -957,14 +867,11 @@ P makeToolsScreen() {
                     list->emptyText("Sin capturas aún");
                     return Nav::push(std::move(list));
                   }});
+    it.push_back({"Exploración", "", [](UiContext&) { return Nav::push(makeExplorationForm()); }});
     it.push_back({"Exportar todo a SD", "", [](UiContext& c) {
                     runExport(c, [&](IFileSink& sink, ExportSummary& s) { return exportAll(sink, c.library, s); });
                     return Nav::none();
                   }});
-    it.push_back({"Diagnóstico HW", "", [](UiContext&) { return Nav::push(makeDiagnosticsScreen()); }});
-    it.push_back({"Exploración", "", [](UiContext&) { return Nav::push(makeExplorationForm()); }});
-    it.push_back({"Registro de eventos", "", [](UiContext&) { return Nav::push(makeEventLogScreen()); }});
-    it.push_back({"Historial arranques", "", [](UiContext&) { return Nav::push(makeBootHistoryScreen()); }});
     return it;
   });
 }
@@ -994,37 +901,11 @@ class ButtonTestScreen : public Screen {
   std::string last_;
 };
 
-P makeSettingsScreen() {
-  return std::make_unique<ListScreen>("settings", "Configuración", [](UiContext& c) {
+// Everything about the device itself, in one place (it used to be split between the tools and the settings).
+P makeDiagnosticsMenu() {
+  return std::make_unique<ListScreen>("diagnostics-menu", "Diagnóstico", [](UiContext&) {
     std::vector<ListItem> it;
-    it.push_back({"Invertir video", c.settings.invertDisplay ? "SÍ" : "NO", [](UiContext& cc) {
-                    cc.settings.invertDisplay = !cc.settings.invertDisplay;
-                    if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
-                    return Nav::none();
-                  }});
-    it.push_back({"Espera captura", numStr(c.settings.captureTimeoutSec) + " s", [](UiContext& cc) {
-                    static const uint8_t steps[] = {5, 10, 15, 30};
-                    for (size_t i = 0; i < 4; ++i) {
-                      if (steps[i] == cc.settings.captureTimeoutSec) {
-                        cc.settings.captureTimeoutSec = steps[(i + 1) % 4];
-                        break;
-                      }
-                    }
-                    if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
-                    return Nav::none();
-                  }});
-    // The language name is always shown in its own language, so it can be found whatever the current one is.
-    it.push_back({"Idioma", langName(c.settings.language), [](UiContext& cc) {
-                    cc.settings.language = nextLang(cc.settings.language);
-                    if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
-                    return Nav::none();
-                  }});
-    it.push_back({"SD en Controles", c.settings.cardInLibrary ? "SÍ" : "NO", [](UiContext& cc) {
-                    cc.settings.cardInLibrary = !cc.settings.cardInLibrary;
-                    if (!cc.persistSettings().ok()) cc.toast("¡No se pudo guardar!", 3000);
-                    return Nav::none();
-                  }});
-    it.push_back({"Prueba de botones", "", [](UiContext&) { return Nav::push(std::make_unique<ButtonTestScreen>()); }});
+    it.push_back({"Estado", "", [](UiContext&) { return Nav::push(makeDiagnosticsScreen()); }});
     it.push_back({"Info del equipo", "", [](UiContext&) {
                     return Nav::push(std::make_unique<InfoScreen>("device-info", "Info del equipo", [](UiContext& cx) {
                       std::vector<std::string> l;
@@ -1036,7 +917,38 @@ P makeSettingsScreen() {
                       return l;
                     }));
                   }});
-    it.push_back({"Diagnóstico", "", [](UiContext&) { return Nav::push(makeDiagnosticsScreen()); }});
+    it.push_back({"Prueba de botones", "", [](UiContext&) { return Nav::push(std::make_unique<ButtonTestScreen>()); }});
+    it.push_back({"Registro de eventos", "", [](UiContext&) { return Nav::push(makeEventLogScreen()); }});
+    it.push_back({"Historial arranques", "", [](UiContext&) { return Nav::push(makeBootHistoryScreen()); }});
+    return it;
+  });
+}
+
+// Changes one preference and saves it; the row shows the new value at once.
+ListItem settingRow(std::string label, std::string value, std::function<void(Settings&)> change) {
+  return {std::move(label), std::move(value), [change](UiContext& c) {
+            change(c.settings);
+            if (!c.persistSettings().ok()) c.toast("¡No se pudo guardar!", 3000);
+            return Nav::none();
+          }};
+}
+
+P makeSettingsScreen() {
+  return std::make_unique<ListScreen>("settings", "Configuración", [](UiContext& c) {
+    std::vector<ListItem> it;
+    // The language name is always shown in its own language, so it can be found whatever the current one is.
+    it.push_back(settingRow("Idioma", langName(c.settings.language), [](Settings& s) { s.language = nextLang(s.language); }));
+    it.push_back(settingRow("Invertir video", c.settings.invertDisplay ? "SÍ" : "NO",
+                            [](Settings& s) { s.invertDisplay = !s.invertDisplay; }));
+    it.push_back(settingRow("Espera captura", numStr(c.settings.captureTimeoutSec) + " s", [](Settings& s) {
+      static const uint8_t steps[] = {5, 10, 15, 30};
+      for (size_t i = 0; i < 4; ++i) {
+        if (steps[i] == s.captureTimeoutSec) {
+          s.captureTimeoutSec = steps[(i + 1) % 4];
+          break;
+        }
+      }
+    }));
     it.push_back({"Almacenamiento", "", [](UiContext&) {
                     auto info = std::make_unique<InfoScreen>("storage", "Almacenamiento", [](UiContext& cx) {
                       size_t buttons = 0, withSignal = 0;
@@ -1076,14 +988,12 @@ P makeSettingsScreen() {
                     });
                     return Nav::push(std::move(info));
                   }});
+    it.push_back({"Diagnóstico", "", [](UiContext&) { return Nav::push(makeDiagnosticsMenu()); }});
     return it;
   });
 }
 
 // ---------------------------------------------------------------- import from the SD card (Flipper-IRDB)
-
-constexpr size_t kImportListMax = 300;          // entries shown per folder
-constexpr const char* kImportRoot = "/irdb";
 
 // `base`, or `base 2`, `base 3`... when `taken` already holds it (always within the name length limit).
 std::string uniqueName(const std::vector<std::string>& taken, const std::string& base) {
@@ -1104,74 +1014,6 @@ std::string uniqueName(const std::vector<std::string>& taken, const std::string&
   return base;
 }
 
-struct ImportState {
-  std::string path, file;
-  bool parsed = false;
-  Status status;
-  ImportedRemote imp;
-};
-
-void parseOnce(UiContext& c, ImportState& st) {
-  if (st.parsed) return;
-  st.parsed = true;
-  if (!c.files || !c.files->available()) {
-    st.status = Status::fail(Err::Unavailable, "no card");
-    return;
-  }
-  auto text = c.files->readText(st.path, limits::kMaxCardFileBytes);
-  if (!text.ok()) {
-    st.status = text.status();
-    return;
-  }
-  auto parsed = parseFlipperIr(text.value());
-  if (!parsed.ok()) {
-    st.status = parsed.status();
-    return;
-  }
-  st.imp = std::move(parsed.value());
-}
-
-// Creates the remote from the parsed file in `cat`. Names are made unique; on failure nothing is left behind.
-Nav doImport(UiContext& c, const std::shared_ptr<ImportState>& st, Id cat, bool removeCategoryOnFailure) {
-  std::vector<std::string> names;
-  std::vector<std::pair<std::string, IrSignal>> buttons;
-  for (const ImportedButton& b : st->imp.buttons) {
-    const std::string n = uniqueName(names, b.name);
-    names.push_back(n);
-    buttons.emplace_back(n, b.signal);
-  }
-  std::vector<std::string> remoteNames;
-  for (const Remote& r : c.library.data().remotes) remoteNames.push_back(r.name);
-  const std::string name = uniqueName(remoteNames, remoteNameFromFile(st->file));
-  auto r = c.library.importRemote(name, cat, buttons);
-  if (!r.ok() && removeCategoryOnFailure) c.library.removeCategory(cat);
-  if (!finishChange(c, r.ok() ? Status::success() : r.status(), "Control importado")) return Nav::none();
-  return Nav::homeThen(makeRemoteScreen(r.value()));
-}
-
-P makeImportCategoryPicker(std::shared_ptr<ImportState> st) {
-  auto list = std::make_unique<ListScreen>("import-category", "Guardar en...", [st](UiContext& c) {
-    std::vector<ListItem> it;
-    for (const Category& cat : c.library.data().categories) {
-      const Id cid = cat.id;
-      it.push_back({cat.name, "", [st, cid](UiContext& c2) { return doImport(c2, st, cid, false); }});
-    }
-    it.push_back({"+ Nueva categoría", "", [st](UiContext&) {
-                    return Nav::push(withPresets(std::make_unique<TextInputScreen>(
-                        "Nueva categoría", "", limits::kMaxNameBytes, [st](UiContext& c2, const std::string& catName) {
-                          auto cat = c2.library.addCategory(catName);
-                          if (!cat.ok()) {
-                            c2.toast(spanishError(cat.status()));
-                            return Nav::none();
-                          }
-                          return doImport(c2, st, cat.value(), true);
-                        }), categoryPresets()));
-                  }});
-    return it;
-  });
-  return list;
-}
-
 // Creates a saved control from a view; names are made unique. Nothing is saved to flash here.
 Result<Id> importViewQuiet(UiContext& c, const RemoteView& view, Id cat) {
   std::vector<std::string> names;
@@ -1188,7 +1030,7 @@ Result<Id> importViewQuiet(UiContext& c, const RemoteView& view, Id cat) {
   return c.library.importRemote(name, cat, buttons);
 }
 
-// Same as doImport, for a control already read into a RemoteView (a card control opened from the Controles list).
+// Imports a control read from the card (a RemoteView), saves and opens it on top of home.
 Nav importViewNav(UiContext& c, const RemoteView& view, Id cat, bool removeCategoryOnFailure) {
   auto r = importViewQuiet(c, view, cat);
   if (!r.ok() && removeCategoryOnFailure) c.library.removeCategory(cat);
@@ -1218,72 +1060,17 @@ P makeImportViewPicker(std::shared_ptr<RemoteView> view) {
   });
 }
 
-P makeImportPreview(const std::string& dir, const std::string& file) {
-  auto st = std::make_shared<ImportState>();
-  st->path = dir + "/" + file;
-  st->file = file;
-  auto info = std::make_unique<InfoScreen>("import-preview", "Importar", [st](UiContext& c) {
-    parseOnce(c, *st);
-    std::vector<std::string> lines;
-    lines.push_back(remoteNameFromFile(st->file));
-    if (!st->status.ok()) {
-      lines.push_back(st->status.code == Err::Unavailable          ? "Sin tarjeta SD"
-                      : st->status.code == Err::OutOfRange         ? "Archivo demasiado grande"
-                      : st->status.code == Err::UnsupportedVersion ? "Versión no soportada"
-                      : st->status.code == Err::Corrupt            ? "No es un archivo IRDB"
-                                                                   : "No se pudo leer");
-      return lines;
-    }
-    const ImportReport& rep = st->imp.report;
-    lines.push_back("Botones: " + numStr(rep.imported));
-    if (rep.unsupported) lines.push_back("Sin soporte: " + numStr(rep.unsupported));
-    if (rep.invalid) lines.push_back("Inválidos: " + numStr(rep.invalid));
-    if (rep.overCapacity) lines.push_back("Sin lugar: " + numStr(rep.overCapacity));
-    if (!rep.firstProblem.empty()) lines.push_back(rep.firstProblem);
-    return lines;
-  });
-  info->okAction("OK:importar Izq:atrás", [st](UiContext& c) {
-    parseOnce(c, *st);
-    if (!st->status.ok() || st->imp.buttons.empty()) {
-      c.toast("Nada para importar");
-      return Nav::none();
-    }
-    return Nav::push(makeImportCategoryPicker(st));
-  });
-  return info;
-}
-
-P makeImportBrowser(const std::string& dir) {
-  CardBrowserOptions o;
-  o.id = "import-browser";
-  o.rootTitle = "Importar IRDB";
-  o.root = kImportRoot;
-  o.dir = dir;
-  o.onFile = [](UiContext&, const std::string& d, const std::string& file) { return Nav::push(makeImportPreview(d, file)); };
-  o.onFolder = [](UiContext&, const std::string& d) { return Nav::push(makeImportFolderPicker(d)); };
-  o.folderLabel = "» Importar carpeta";
-  return makeCardBrowser(std::move(o));
-}
-
 // ---------------------------------------------------------------- home
 
 P buildHome() {
+  // Six entries, one page. Anything done to one control (create, import, loop, crazy, export) is in Controles, on the
+  // Right-key menu of the row it applies to, so each action has a single place.
   auto home = std::make_unique<IconGridScreen>("home", "IRis", [](UiContext&) {
     std::vector<GridItem> it;
     it.push_back({"Controles", icons::kRemote.data(), [](UiContext&) { return Nav::push(makeLibraryScreen()); }});
     it.push_back({"Aprender señal", icons::kLearn.data(), [](UiContext&) { return Nav::push(makeLearnTargetPicker()); }});
-    it.push_back({"Crear control", icons::kCreate.data(), [](UiContext&) { return Nav::push(makeCreateRemote()); }});
-    it.push_back({"Be Gone", icons::kBeGone.data(), [](UiContext&) { return Nav::push(makeBeGoneMode()); }});
-    it.push_back({"Modo loco", icons::kCrazy.data(), [](UiContext&) { return Nav::push(makeCrazyMode()); }});
-    it.push_back({"Modo loop", icons::kLoop.data(), [](UiContext&) { return Nav::push(makeLoopMode()); }});
     it.push_back({"Escuchar", icons::kListen.data(), [](UiContext&) { return Nav::push(makeListenMode()); }});
-    it.push_back({"Importar", icons::kImport.data(), [](UiContext& c) {
-                    if (!c.files || !c.files->available()) {
-                      c.toast("Sin tarjeta SD");
-                      return Nav::none();
-                    }
-                    return Nav::push(makeImportBrowser(kImportRoot));
-                  }});
+    it.push_back({"Be Gone", icons::kBeGone.data(), [](UiContext&) { return Nav::push(makeBeGoneMode()); }});
     it.push_back({"Herramientas IR", icons::kTools.data(), [](UiContext&) { return Nav::push(makeToolsScreen()); }});
     it.push_back({"Configuración", icons::kSettings.data(), [](UiContext&) { return Nav::push(makeSettingsScreen()); }});
     return it;
@@ -1309,21 +1096,12 @@ namespace kit {
 
 std::string numStr(unsigned long long v) { return ::iris::numStr(v); }
 std::string shortSignal(const IrSignal& s) { return ::iris::shortSignal(s); }
-std::vector<std::string> signalLines(const IrSignal& s) { return ::iris::signalLines(s); }
 bool finishChange(UiContext& c, const Status& st, const std::string& okMsg) { return ::iris::finishChange(c, st, okMsg); }
 void sendSignal(UiContext& c, const IrSignal& s) { ::iris::sendSignal(c, s); }
 IrSignal rawReplay(const IrSignal& captured) { return ::iris::rawReplay(captured); }
 std::unique_ptr<Screen> makeRemotePicker(const std::string& title, PickFn onPick) { return ::iris::makeRemotePicker(title, std::move(onPick)); }
-std::unique_ptr<Screen> makeRemoteScreen(Id remote) { return ::iris::makeRemoteScreen(remote); }
 std::unique_ptr<Screen> makeCaptureDetail(const CaptureRecord& rec) { return ::iris::makeCaptureDetail(rec); }
-std::vector<std::string> categoryPresets() { return ::iris::categoryPresets(); }
-std::unique_ptr<TextInputScreen> withPresets(std::unique_ptr<TextInputScreen> screen, std::vector<std::string> list) {
-  return ::iris::withPresets(std::move(screen), std::move(list));
-}
 Result<Id> importViewQuiet(UiContext& c, const RemoteView& view, Id category) { return ::iris::importViewQuiet(c, view, category); }
-Nav importView(UiContext& c, const RemoteView& view, Id category, bool removeCategoryOnFailure) {
-  return ::iris::importViewNav(c, view, category, removeCategoryOnFailure);
-}
 std::unique_ptr<Screen> makeImportViewCategoryPicker(std::shared_ptr<RemoteView> view) { return ::iris::makeImportViewPicker(std::move(view)); }
 
 }  // namespace kit
