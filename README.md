@@ -49,6 +49,7 @@ Wiring and assembly:
 
 | Document | What it is |
 |---|---|
+| [`docs/bom.md`](docs/bom.md) | Bill of materials: parts, quantities, screws and printed pieces |
 | [`docs/wiring.md`](docs/wiring.md) | The design guide: every block, the safety rules and the reasoning |
 | [`docs/breadboard-wiring.md`](docs/breadboard-wiring.md) | The circuit exactly as it was wired and worked on the bench |
 | [`docs/plaquita.md`](docs/plaquita.md), [`docs/assembly.md`](docs/assembly.md) | The soldered component board and the connectors |
