@@ -24,6 +24,19 @@ struct BatteryCurvePoint {
 inline constexpr BatteryCurvePoint kBatteryCurve[] = {{2500, 0}, {3000, 10}, {3600, 50}, {3700, 60}, {4000, 90}, {4150, 100}};
 inline constexpr int kBatteryCurvePoints = static_cast<int>(sizeof kBatteryCurve / sizeof kBatteryCurve[0]);
 
+// The divider reads the XL6009 input, not the cell: between the two the current of the running device crosses the charger's
+// protection circuit, the power switch and the wiring. Measured on 2026-11-11 with the device on: cell 4.09 V, charger output
+// 4.05 V, after the switch 4.00 V, divider 3.98 V, so 0.11 V in total (0.04 + 0.05 + 0.02). The drop follows the current (it is
+// larger while transmitting, smaller when idle), so this fixed value is the one measured in normal operation, not an exact
+// compensation. Remove it if the divider is ever moved to the cell terminals.
+inline constexpr uint16_t kBatteryLoadDropMv = 110;
+
+// The cell voltage estimated from what the divider reads.
+inline uint16_t batteryCellMillivolts(uint16_t measuredMv) {
+  const uint32_t cell = static_cast<uint32_t>(measuredMv) + kBatteryLoadDropMv;
+  return static_cast<uint16_t>(cell > 65535u ? 65535u : cell);
+}
+
 // Linear interpolation between the anchor points; clamped to 0..100.
 inline int batteryPercentApprox(uint16_t mv) {
   if (mv <= kBatteryCurve[0].millivolts) return 0;

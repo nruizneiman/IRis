@@ -84,3 +84,9 @@ TEST_CASE("battery estimator: a missing reading clears it and the next one start
   CHECK(e.valid());
   CHECK(e.percent() == 50);
 }
+
+TEST_CASE("battery level: the divider reading is raised by the measured drop to estimate the cell") {
+  CHECK(batteryCellMillivolts(3980) == 4090);   // the 2026-11-11 measurement: divider 3.98 V, cell 4.09 V under load
+  CHECK(batteryCellMillivolts(65500) == 65535);  // saturates instead of wrapping
+  CHECK(batteryPercentApprox(batteryCellMillivolts(3980)) == 96);
+}

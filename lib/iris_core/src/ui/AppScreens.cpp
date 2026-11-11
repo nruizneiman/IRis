@@ -207,7 +207,7 @@ std::vector<std::string> diagnosticsLines(UiContext& c) {
   {
     const auto mv = c.battery.readMillivolts();
     l.push_back("Batería: " + (mv ? batteryText(c) : std::string("n/d")));
-    if (mv) l.push_back("Nivel est.: ~" + std::to_string(batteryPercentApprox(*mv)) + "%");
+    if (mv) l.push_back("Nivel est.: ~" + std::to_string(batteryPercentApprox(batteryCellMillivolts(*mv))) + "%");
   }
   l.push_back("Reinicio: " + c.info.resetReason);
   l.push_back("Almacén: " + c.info.storage);
@@ -1293,7 +1293,8 @@ P buildHome() {
   // The title and the gauge share one smoothed estimate, so the number does not jump with every sample.
   auto battery = std::make_shared<BatteryEstimator>();
   home->titleFn([battery](UiContext& c) {
-    battery->update(c.clock.nowMs(), c.battery.readMillivolts());
+    const auto measured = c.battery.readMillivolts();
+    battery->update(c.clock.nowMs(), measured ? std::optional<uint16_t>(batteryCellMillivolts(*measured)) : std::nullopt);
     const std::string dirty = c.library.dirty() ? " *" : "";
     if (!battery->valid()) return utf8Justify("IRis", "Bat n/d" + dirty, Painter::kCols);
     return utf8Justify("IRis", std::to_string(battery->percent()) + "%" + dirty, Painter::kCols - 3);

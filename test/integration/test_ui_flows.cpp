@@ -47,7 +47,7 @@ TEST_CASE("scenario ui: with a battery reading the title shows an estimate and t
   UiRig r;
   r.battery.set(3870);
   r.advance(300);
-  CHECK(r.shows("77%"));               // 3.87 V on the generic curve; the "~" is only on the diagnostics page
+  CHECK(r.shows("88%"));               // 3.87 V + the 0.11 V drop to the cell = 3.98 V on the generic curve; the "~" is only on the diagnostics page
   CHECK_FALSE(r.shows("~"));
   CHECK_FALSE(r.shows("3.87 V"));      // the exact voltage is on the diagnostics page
   CHECK_FALSE(r.shows("Bat n/d"));
