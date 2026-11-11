@@ -106,7 +106,7 @@ void setup() {
   d.battery.begin();
 #endif
   char line[48];
-  d.info.firmware = "0.6-dev";
+  d.info.firmware = "0.6.0";
   d.info.displayController = kIrisPanelName;
   d.info.irLibrary = "IRremoteESP8266 2.9.0";
   d.info.resetReason = resetReasonName();
