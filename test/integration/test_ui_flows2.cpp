@@ -1,4 +1,4 @@
-// Stage 6 flows: duplicating controls, saving RAW captures, log viewers and the persistence guards.
+// More flows: duplicating controls, saving RAW captures, log viewers and the persistence guards.
 // Real UI + real services + fake hardware: proves the software flows, not the device.
 #include <doctest.h>
 

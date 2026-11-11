@@ -124,6 +124,9 @@ constexpr CatalogEntry kCatalog[] = {
     {"Límite alcanzado", "Limit reached"}, {"No encontrado", "Not found"}, {"Ya existe ese nombre", "Name already exists"},
     {"En uso: vacíelo antes", "In use: empty it first"}, {"Datos dañados", "Corrupted data"},
     {"Error al guardar", "Save error"}, {"No disponible ahora", "Not available now"},
+    // boot notices (app/Boot.cpp)
+    {"Se usó el respaldo", "Backup was used"}, {"Datos dañados: vacío", "Corrupt data: empty"},
+    {"Datos de otra versión", "Newer data version"}, {"No leído: sin guardar", "Not read: saving off"},
 };
 constexpr size_t kCatalogCount = sizeof kCatalog / sizeof kCatalog[0];
 
@@ -140,12 +143,14 @@ constexpr CatalogEntry kPrefixes[] = {
     {"Vista previa: ", "Preview: "},  {"Archivos: ", "Files: "},    {"Importados: ", "Imported: "},
     {"Omitidos: ", "Skipped: "},     {"Capturas: ", "Captures: "}, {"Loco: ", "Crazy: "},
     {"Exportados: ", "Exported: "}, {"Apagar: ", "Power off: "},     {"Encender: ", "Power on: "},
+    {"Perdido: ", "Lost: "},
 };
 
 // Text that ends a string ("3 botones"): the head is looked up as a whole string.
 constexpr CatalogEntry kSuffixes[] = {
     {" botones", " buttons"},  {" bot.", " btn."},   {" pulsos", " pulses"},
     {" (ruido)", " (noise)"},  {" códigos a probar", " codes to try"},
+    {" controles perdidos", " remotes lost"},
 };
 
 struct SortedIndex {

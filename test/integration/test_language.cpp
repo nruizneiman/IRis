@@ -61,6 +61,13 @@ TEST_CASE("language: translation rules") {
   CHECK(translate(Lang::En, "3 botones") == "3 buttons");                // suffix
   CHECK(translate(Lang::En, "Mi sala") == "Mi sala");                    // unknown text is left alone
   CHECK(translate(Lang::En, "") == "");
+  // boot notices: every one has an English text that fits the 21 columns of the footer
+  CHECK(translate(Lang::En, "Se usó el respaldo") == "Backup was used");
+  CHECK(translate(Lang::En, "Perdido: Sala") == "Lost: Sala");
+  CHECK(translate(Lang::En, "3 controles perdidos") == "3 remotes lost");
+  CHECK(translate(Lang::En, "Datos dañados: vacío") == "Corrupt data: empty");
+  CHECK(translate(Lang::En, "Datos de otra versión") == "Newer data version");
+  CHECK(translate(Lang::En, "No leído: sin guardar") == "Not read: saving off");
   CHECK(std::string(langName(Lang::Es)) == "Español");
   CHECK(nextLang(nextLang(Lang::En)) == Lang::En);
 }

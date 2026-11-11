@@ -1,6 +1,6 @@
 // Protocol catalogue used for validation and manual signal creation.
-// Field widths come from public protocol descriptions and are NOT yet cross-checked against
-// IRremoteESP8266 (planned for Stage 5). Treat them as the app's own contract.
+// Field widths are the app's own contract. The mapping to IRremoteESP8266 is cross-checked on the PC against the
+// library sources (test/hostlib, docs/firmware/ir.md).
 #pragma once
 
 #include <cstddef>

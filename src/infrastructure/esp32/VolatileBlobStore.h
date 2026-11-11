@@ -6,8 +6,7 @@
 
 #include "hardware/IBlobStore.h"
 
-// RAM-only store used until the LittleFS store exists (Stage 5): data is LOST on reset.
-// The UI states this in the storage and device-info screens.
+// RAM-only store from before the LittleFS store existed, not used by the current firmware: data is LOST on reset.
 class VolatileBlobStore : public iris::IBlobStore {
  public:
   bool exists(const std::string& key) const override { return files_.count(key) != 0; }

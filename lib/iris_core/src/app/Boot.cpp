@@ -25,7 +25,7 @@ BootReport loadPersistentData(IBlobStore& store, LibraryRepository& repo, Remote
     if (!out.lostRemotes.empty()) {
       for (const std::string& name : out.lostRemotes) log.log(LogLevel::Error, "boot", "remote unreadable: " + name);
       report.notice = out.lostRemotes.size() == 1 ? "Perdido: " + out.lostRemotes[0]
-                                                   : "Perdidos: " + std::to_string(out.lostRemotes.size()) + " controles";
+                                                   : std::to_string(out.lostRemotes.size()) + " controles perdidos";
     }
     return report;
   }
@@ -41,7 +41,7 @@ BootReport loadPersistentData(IBlobStore& store, LibraryRepository& repo, Remote
   }
   // Transient trouble or newer data: do not let a later save replace what we could not read.
   report.persistEnabled = false;
-  report.notice = st.code == Err::UnsupportedVersion ? "Datos de otra versión" : "No se pudo leer: sin guardar";
+  report.notice = st.code == Err::UnsupportedVersion ? "Datos de otra versión" : "No leído: sin guardar";
   return report;
 }
 

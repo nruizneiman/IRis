@@ -1,6 +1,6 @@
 // Console simulator: drives the REAL app services (library, learn, transmit, exploration,
-// persistence) against fake hardware. It is a command interpreter, not a UI: screens and
-// button navigation arrive in Stage 4. Everything it shows is simulated, not measured.
+// persistence) against fake hardware. It is a command interpreter; its key commands also drive
+// the real screens through UiRig. Everything it shows is simulated, not measured.
 #pragma once
 
 #include <string>

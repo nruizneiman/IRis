@@ -18,7 +18,7 @@ struct BootReport {
   // memory, data written by a newer firmware). The files are left untouched and saving is disabled so they
   // cannot be overwritten with an empty library.
   bool persistEnabled = true;
-  std::string notice;  // Spanish text for a toast, empty when everything is fine
+  std::string notice;  // Spanish text for a toast (translated when drawn, at most 21 columns), empty when all is fine
 };
 
 BootReport loadPersistentData(IBlobStore& store, LibraryRepository& repo, RemoteLibrary& library,

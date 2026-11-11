@@ -44,8 +44,8 @@ the restarted device finds a complete old or new library.
 
 ## What loading does
 
-The messages in quotes are shown at boot. They are in Spanish in both languages: they are not in the translation
-catalog yet.
+The messages in quotes are shown at boot, here in their Spanish text; in English they read "Backup was used",
+"Lost: Sala", "Corrupt data: empty", "Not read: saving off" and "Newer data version".
 
 | Situation | Result |
 |---|---|
@@ -54,7 +54,7 @@ catalog yet.
 | Index corrupt, backup index intact | Backup (boot toast "Se usó el respaldo") |
 | One remote file damaged / missing | Everything else loads; the remote is reported ("Perdido: Sala") and its bytes kept as `bad<id>.irs` |
 | Both indexes corrupt | Empty library, bytes kept as `badidx.irs`, saving allowed ("Datos dañados: vacío") |
-| Read error or out of memory | **Saving disabled** until reboot; nothing is written or deleted ("No se pudo leer: sin guardar") |
+| Read error or out of memory | **Saving disabled** until reboot; nothing is written or deleted ("No leído: sin guardar") |
 | Data written by a newer firmware | **Saving disabled**; no fallback to an older backup ("Datos de otra versión") |
 | Format-1 file (`library.irs`) | Loaded; migrated on the next save and then removed (golden file in `test/fixtures/library_v1.irs`) |
 

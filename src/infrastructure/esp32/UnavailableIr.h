@@ -4,7 +4,7 @@
 #include "hardware/IIrReceiver.h"
 #include "hardware/IIrTransmitter.h"
 
-// Honest placeholders until the IR adapters exist (Stage 5): every request fails with
+// Placeholders from before the IR adapters existed, not used by the current firmware: every request fails with
 // Err::Unavailable, so the UI reports "not available" instead of pretending to capture or send.
 class UnavailableIrReceiver : public iris::IIrReceiver {
  public:

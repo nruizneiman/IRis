@@ -8,7 +8,7 @@ const ProtocolInfo kProtocols[] = {
     {Protocol::Nec, "nec", "NEC", 38000, false, 1, {{32, 16, 8}}},
     {Protocol::Samsung, "samsung", "Samsung", 38000, false, 1, {{32, 8, 8}}},
     // Sony 20 bit: 5 address bits + 8 "extended" bits, which IRremoteESP8266 reports as the upper bits
-    // of the command (7 + 8 = 15 command bits). Confirmed by reading ir_Sony.cpp (Stage 5).
+    // of the command (7 + 8 = 15 command bits). Confirmed by reading ir_Sony.cpp.
     {Protocol::Sony, "sony", "Sony SIRC", 40000, false, 3, {{12, 5, 7}, {15, 8, 7}, {20, 5, 15}}},
     {Protocol::Rc5, "rc5", "RC5", 36000, true, 2, {{12, 5, 6}, {13, 5, 7}}},
     {Protocol::Jvc, "jvc", "JVC", 38000, false, 1, {{16, 8, 8}}},

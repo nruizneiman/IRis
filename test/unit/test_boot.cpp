@@ -101,7 +101,7 @@ TEST_CASE("boot: a read error or newer data disables saving and touches nothing"
   r.store.setFailReads(true);
   BootReport rep = r.boot();
   CHECK_FALSE(rep.persistEnabled);
-  CHECK(rep.notice == "No se pudo leer: sin guardar");
+  CHECK(rep.notice == "No leído: sin guardar");
   r.store.setFailReads(false);
   CHECK(r.store.list() == filesBefore);  // nothing written, nothing deleted
 

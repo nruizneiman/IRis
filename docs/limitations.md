@@ -28,7 +28,6 @@ Measure these on your own unit; do not assume them.
 - Second receiver: the code path exists (`MultiReceiver`, `IRIS_ENABLE_RX2`) but it was never wired. A second emitter
   channel has a pin reserved and no code.
 - The device cannot be used while it charges (no power path in the charger module).
-- The boot messages about storage are shown in Spanish in both languages.
 - One backup generation (`idx.prev`). If both indexes are damaged the device starts empty and keeps the
   unreadable bytes as `badidx.irs`; one damaged remote file loses only that remote ([persistence](firmware/persistence.md)).
 - The library moves in and out only as Flipper `.ir` files on the microSD card (import and export); there is no USB or
