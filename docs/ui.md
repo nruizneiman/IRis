@@ -28,7 +28,7 @@ row is cut; list rows with a right-aligned value truncate the label first.
 Battery: without a measurement circuit (build without `IRIS_BATTERY_RATIO_PERMILLE`, or a pin that reads under
 about 0.3 V) the home title bar says `Bat n/d`. With one it shows an **estimated** level, `77%`, plus a battery
 outline with 0-4 bars (4 from 75 %, 3 from 50 %, 2 from 25 %, 1 from 10 %). The estimate comes from a generic
-lithium-ion curve (`app/BatteryLevel.h`, anchor points quoted there), not from this cell, and under load it reads
+lithium-ion curve (`app/BatteryLevel.h`, anchor points quoted there, with 4.10 V taken as 100 %), not from this cell, and under load it reads
 low; the exact voltage and the estimate (marked `~`) are on *Herramientas IR > Diagnóstico HW*. The shown number is
 corrected for the voltage lost between the cell and the divider (a fixed 0.11 V measured on this unit, `kBatteryLoadDropMv`) and smoothed (`BatteryEstimator`: one sample every 0.5 s, exponential average, and it moves only when the new value differs
 by 2 points or more) so it does not flicker with ADC noise or transmission dips; after power-on it takes a few
