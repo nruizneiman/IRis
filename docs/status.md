@@ -1,27 +1,26 @@
-# Status (end of Stage 7)
+# Status
 
-Legend: **Functional** = implemented and covered by PC tests; **Cross-checked** = verified against the real
-IRremoteESP8266 code on the PC; **Compiles** = builds for the ESP32 but has never run on it; **Simulated** = exists
-only as a fake; **Documented** = guide written, nothing executed. Nothing here has run on real hardware.
+Legend: **In use** = works on the author's assembled unit; **Bench-checked** = measured or tried once on the bench,
+with a multimeter only; **PC-tested** = covered by the tests on the PC, not specifically checked on the device;
+**Not validated** = written, never tried.
 
 | Area | State | Notes |
 |---|---|---|
-| Domain, library rules, manual signals, learn / transmit / exploration | Functional | Limits and confirmations in `docs/ui.md` |
-| Codec domain <-> IRremoteESP8266 | Cross-checked | 7464 assertions; findings in `docs/ir-notes.md` |
-| Persistence: per-remote files, atomic commit, backup, recovery, versioning | Functional | `docs/persistence.md`; power cuts simulated at every write |
-| Boot logic, boot history, settings, memory guard | Functional | Real heap numbers unmeasured |
-| UI (all screens, editors, forms), debouncer | Functional (fake display) | 147 PC test cases; never seen on a real OLED |
-| Multi-receiver | Functional | Second receiver not wired |
-| IR receiver / transmitter adapters, LittleFS store, U8g2 display, GPIO buttons, watchdog | Compiles | Never run; provisional safety limits |
-| **Serial bench console** (`bench` env: I2C scan, buttons, RX dump, bounded TX, loopback, ADC) | Compiles | New in Stage 7; commands in `docs/physical-test-plan.md` |
-| Display probe (`display_probe` env) | Compiles | |
-| **Wiring guide** (`docs/wiring.md`) | Documented | Starting-point values; pinout of the TSOP38238 read in the Vishay datasheet; several items marked to verify |
-| **Physical test plan** (`docs/physical-test-plan.md`, B0-B11) with log template | Documented | Never executed; pass criteria marked "proposed" |
-| Console simulator, fakes | Simulated | |
-| Wokwi | Prepared, unvalidated | Never opened |
-| Battery measurement (`IBatteryMonitor` for the divider) | Bench-checked at one point | 3.8 V on screen against 3.77 V on the multimeter (2026-11-03); other voltages not compared. The title bar shows an estimated level and bars (simulated, flashed on the panel pending) |
-| Modes (loop, crazy, Be Gone, listening), controls from the card, folder import, export to SD | Simulated, not flashed | Scenario tests pass; see `docs/ui.md` (Modes and the card). Not tried on the device or with a real card yet |
-| Second emitter channel, state-based (A/C) protocols, RAW editor on the device | Pending | Listed in `docs/risks.md` |
+| Library (categories, remotes, buttons), learning, sending | In use | Limits and confirmations in `docs/ui.md` |
+| Display, five buttons, menus, on-screen keyboard | In use | SSD1306 panel; accents and `ñ ¡ ¿` were not checked glyph by glyph. The SH1106 build compiles but was never tried on such a panel |
+| Remotes from the card, import (one remote or a folder), export | In use | Flipper `.ir` files under `/irdb`; `docs/ui.md` |
+| Modes: Listen, Be Gone, loop, crazy | In use | |
+| Storage in flash: one file per remote, atomic commit, backup, recovery | In use; power cuts PC-tested | Cuts are simulated at every write on the PC; not provoked on the device. `docs/persistence.md` |
+| Battery power (18650, charger, boost to 5 V) | In use | Not characterised: behaviour with a nearly empty cell, supply sag while sending |
+| Battery level on screen | Bench-checked at one point | 3.8 V on screen against 3.77 V on the multimeter; the percentage is an estimate from a generic curve |
+| IR range | Bench-checked | Almost 2 m against a TV with two LEDs; LED current calculated, not measured (`docs/hardware.md`) |
+| Codec, domain model <-> IRremoteESP8266 | PC-tested against the real library code | `docs/ir-notes.md`. On the device only NEC remotes were confirmed |
+| Manual signals, code exploration | PC-tested | |
+| Serial bench console (`bench`), display probe (`display_probe`) | Used during bring-up | Commands in `docs/physical-test-plan.md` |
+| Printed case | In use | To be published on MakerWorld; `docs/case-print.md` |
+| Second receiver | PC-tested | Pin reserved, not wired |
+| Second emitter channel, state-based (A/C) protocols, RAW editor on the device | Not implemented | `docs/risks.md` |
+| Wokwi project | Not validated | Never opened in Wokwi |
 
 ## Tests
 
@@ -29,10 +28,11 @@ only as a fake; **Documented** = guide written, nothing executed. Nothing here h
 ./tools/test.ps1
 ```
 
-- `iris_unit_tests`: 212 cases.  `iris_ir_tests`: 10 cases (needs the library sources from one `pio run`).
-- Firmware: `esp32dev`, `esp32dev_ssd1306`, `display_probe`, `bench` all build.
+- `iris_unit_tests`: 212 cases. `iris_ir_tests`: 14 cases (needs the library sources from one `pio run`).
+- Firmware environments: `esp32dev`, `esp32dev_ssd1306`, `display_probe`, `bench`.
 
-## What the first hardware session should produce
+## Documents and how far to trust them
 
-The acceptance list in `docs/physical-test-plan.md` (B11). Until it is ticked, treat every hardware-dependent
-statement in this repository as an assumption.
+`docs/wiring.md` and `docs/physical-test-plan.md` were written before the build, as a careful plan; the unit was then
+built with a multimeter as the only instrument. Where they say "to verify" or "proposed", that is still true unless
+`docs/hardware.md` reports a measurement. `docs/risks.md` lists what remains unknown.

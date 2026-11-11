@@ -1,6 +1,10 @@
 # Wiring guide
 
-Status: **design guidance, nothing here has been built or measured.** Facts marked *(datasheet)* were read in
+Status: **design guidance written before the build.** The author's unit was later built from it and works (what was
+measured is in `docs/hardware.md`); the guide itself was not rewritten afterwards, so read it as the reasoning and the
+safety rules, and take the circuit that was actually built from `docs/breadboard-wiring.md` and `docs/plaquita.md`. One
+difference to know up front: the guide describes a MOSFET emitter stage, and the unit ended up with an **NPN transistor
+(2N2222)**, because the IRFZ44N at hand did not switch on from a 3.3 V GPIO. Facts marked *(datasheet)* were read in
 the manufacturer document named next to them; facts marked *(to verify)* are assumptions you must check
 before relying on them. Values given as "starting point" are not final: the LED, resistors, MOSFET and power
 modules of this project are not identified yet. Follow `docs/physical-test-plan.md` block by block; do not wire
@@ -280,10 +284,8 @@ switch, not a GPIO.
 
 ## 5. What not to do
 
-- Do not drive the LED from a GPIO. (Current state: the tester asked for exactly that as a **temporary bench measure**
-  on 2026-11-01 because only IRFZ44N parts were at hand, with 220 Ω to GND; see `docs/logs/2026-11-01-b8.md`. Closed
-  on 2026-11-03: a 2N2222 now drives the LED from 5 V, see `docs/logs/2026-11-02-power.md`. Still to do: the 100 kΩ
-  base pull-down on the final board, and the LED current and range measurements.)
+- Do not drive the LED from a GPIO: use a transistor stage (the author's unit uses a 2N2222 driving the LEDs from 5 V,
+  see `docs/hardware.md`).
 - Do not connect the LED branch to the battery before the current-limiting resistor and the gate pull-down exist.
 - Do not leave a transmission test running unattended; the bench commands are bounded on purpose.
 - Do not charge a cell while the device runs from the same TP4056 output (no power-path).

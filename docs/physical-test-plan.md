@@ -1,6 +1,8 @@
 # Physical test plan (by blocks)
 
-Nothing in this plan has been executed. Desktop tests and the simulator are **not** a substitute for any of
+A plan for bringing up a new unit block by block. On the author's unit the blocks up to the battery were run with a
+multimeter (results in `docs/hardware.md`); the instrument-based checks (oscilloscope, measured LED current) were not.
+Desktop tests and the simulator are **not** a substitute for any of
 it: they prove the software logic, not electrons or light. Pass/fail numbers marked *(proposed)* are starting
 criteria chosen for this project, not figures from a datasheet; adjust them when you learn more, and write the
 change in the log.

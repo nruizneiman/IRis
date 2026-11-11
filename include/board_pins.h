@@ -1,7 +1,7 @@
 // Single source of truth for GPIO assignment. NOTHING else in the code base may contain GPIO numbers.
 //
-// STATUS: PROPOSED, NOT VERIFIED on the physical board. Check against the silkscreen of your
-// 30-pin ESP32-WROOM-32 board before wiring (pin sets vary between 30-pin variants).
+// STATUS: used as they are on the author's 30-pin ESP32-WROOM-32 dev board. Check them against the silkscreen of
+// your board before wiring (pin sets vary between 30-pin variants).
 //
 // Rules used:
 //   - GPIO 6..11 are wired to the SPI flash: never use.
@@ -22,7 +22,7 @@ constexpr uint8_t kI2cScl = 22;
 constexpr uint8_t kIrRx1 = 34;
 constexpr uint8_t kIrRx2 = 35;  // second receiver, enabled later
 
-// IR emitter gate drive (to the logic-level MOSFET gate through a series resistor, with a pull-down)
+// IR emitter drive (to the base of the transistor through a series resistor, with a pull-down)
 constexpr uint8_t kIrTx1 = 23;
 constexpr uint8_t kIrTx2 = 19;  // reserved for a second emitter channel
 
@@ -34,7 +34,7 @@ constexpr uint8_t kBtnRight = 26;
 constexpr uint8_t kBtnOk = 25;
 
 // microSD module (SPI, own pin set because the ESP32 default VSPI pins 23/19 are taken by the IR emitters).
-// PROPOSED, NOT VERIFIED on the board: all four are free GPIOs, none is a strapping or flash pin.
+// All four are free GPIOs, none is a strapping or flash pin.
 constexpr uint8_t kSdSck = 18;
 constexpr uint8_t kSdMiso = 16;
 constexpr uint8_t kSdMosi = 17;

@@ -1,6 +1,7 @@
-# User interface (Stage 4)
+# User interface
 
-All text shown on the device is Spanish; code and this document are English. The UI lives in
+The device shows English (default) or Spanish (*Settings > Language*). The screens are written in Spanish in the code and
+translated when drawn, so this document names menus by their Spanish text; the English names are in `ui/I18n.cpp`. The UI lives in
 `lib/iris_core/src/ui/` and talks to hardware only through interfaces, so every screen is tested
 on the PC with a fake display and fake buttons (`test/integration/test_ui_flows.cpp`).
 

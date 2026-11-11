@@ -4,12 +4,29 @@ The complete guides are `docs/wiring.md` (how to connect each block) and `docs/p
 (how to validate it, block by block, with the `bench` console). This file keeps the display procedure and
 the earlier Stage 5 checklist, which the test plan supersedes.
 
-Nothing in this file has been verified on the real board yet.
+## Measured on the author's unit
+
+A summary of the bench sessions (2026-10-31 to 2026-11-03). Multimeter only, no oscilloscope: currents are calculated
+from resistor values unless a row says otherwise, and distances are estimates.
+
+| Block | Result |
+|---|---|
+| Board | 30-pin ESP32-WROOM-32 dev board, CP210x USB-serial. The pins of `include/board_pins.h` were used as they are |
+| OLED | 1.3" 128x64 I2C, **SSD1306** (identified with `display_probe`); the menus read well on the panel |
+| Receiver | TSOP38238 on GPIO34; NEC remotes are decoded and learned through the UI |
+| Emitter driver | Two IRFZ44N units did **not** switch on from the 3.3 V GPIO (gate at 3.2 V, drain barely moving). Replaced by a 2N2222: GPIO23 -> 1 kΩ -> base, emitter to GND, collector to the LED cathodes |
+| Emitter range (a TV as the target) | 1 LED with 220 Ω (about 16 mA): a few cm. 1 LED at about 32 mA: under 1 m. **2 LEDs, each with its own 100 Ω from 5 V (about 34 mA each): almost 2 m** |
+| microSD | 6-pin SPI module powered from VIN (5 V), read at 4 MHz on SCK 18 / MISO 16 / MOSI 17 / CS 4 |
+| Power | One 18650, TP4056-class USB-C charger with protection, XL6009 boost set to 5.0 V into VIN. With the cell at 3.87 V the board ran at 4.96 V. Not tested: a nearly empty cell, long runs |
+| Battery reading | Divider of 2 x 10 kΩ to GPIO33 (`IRIS_BATTERY_RATIO_PERMILLE=2000`): 3.8 V on screen against 3.77 V on the multimeter, one point only |
+
+A lesson worth repeating: a loose breadboard contact on the emitter drive looked for a whole session like a range
+problem. Check that the drive pin of the transistor really moves before judging the range.
 
 ## Identify the OLED controller (do this first)
 
-**Result for the author's unit (2026-10-31): SSD1306.** The SSD1306 test picture was clean; see
-`docs/logs/2026-10-31-b2-b3.md`. The procedure below is kept for any other panel.
+**Result for the author's unit (2026-10-31): SSD1306** (its test picture was clean, the SH1106 one was not). The
+procedure below is for any other panel.
 
 An I2C scan only returns the address (0x3C or 0x3D); it cannot tell SH1106 from SSD1306. A 1.3"
 128x64 module is often SH1106 (132-column RAM, 2 px offset), but that is a guess, not a fact.
@@ -24,7 +41,7 @@ An I2C scan only returns the address (0x3C or 0x3D); it cannot tell SH1106 from 
 
 If the scan finds nothing, check the 4 wires and the supply before suspecting the driver.
 
-## Pins (proposed, unverified)
+## Pins
 
 See `include/board_pins.h`. Avoided on purpose: GPIO 6-11 (flash), 0/2/5/12/15 (strapping, GPIO12 can
 stop the boot), 1/3 (USB serial). GPIO 34-39 are input-only without pull-ups (used for the IR
@@ -35,7 +52,7 @@ receivers). Verify against your board's silkscreen: 30-pin boards differ.
 Each button between its GPIO and GND (internal pull-up). Use *Configuración > Diagnóstico > Prueba de botones* to
 check all five: it shows the live level of every key and the last event (short / long press).
 
-## Stage 5 checks to run on the board (in this order; stop at the first surprise)
+## Checks to run on a new board (in this order; stop at the first surprise)
 
 1. **Storage and memory**: boot, create a control, reboot: it must still be there (*Configuración > Almacenamiento*
    shows `Flash nK/nK`). If it says `FLASH NO MONTADA` the partition is unformatted: format from that screen.
@@ -47,8 +64,8 @@ check all five: it shows the live level of every key and the last event (short /
    TSOP, press a key. Expect `Reconocida` for NEC/Samsung/Sony/RC5/JVC remotes and RAW otherwise. Holding
    the key must not produce a second capture. Compare the decoded address/command with documentation for
    that remote when available. Check the *Configuración > Diagnóstico > Estado* counters (`RX vistos`).
-3. **Emitter, no LED**: connect only the MOSFET gate to a scope/logic analyser or a multimeter in AC mode and send
-   a code: the gate must be low at boot, show bursts only while sending, and end low. Check that a mark never
+3. **Emitter, no LED**: connect only the transistor's drive pin to a scope/logic analyser or a multimeter in AC mode and
+   send a code: it must be low at boot, show bursts only while sending, and end low. Check that a mark never
    exceeds 25 ms and that *Cancelar* stops between frames.
 4. **Emitter with a current-limited LED**: use a verified resistor sized for a conservative current from the
    LED's measured forward voltage. See the LED glow with a phone camera. Do not add LEDs or raise limits yet.

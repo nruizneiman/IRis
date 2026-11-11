@@ -1,12 +1,11 @@
 # Breadboard wiring record (as of 2026-11-03)
 
 Purpose: freeze exactly how the bench circuit was wired before the breadboard is taken apart and the real
-(perfboard) build starts. Pin numbers come from `include/board_pins.h`; the circuit facts come from the tester's
-statements in chat and from `docs/logs/`. Nothing here was re-measured at the time of writing. Items marked
-**(unconfirmed)** were not stated by the tester.
+(perfboard) build starts. Pin numbers come from `include/board_pins.h`; the circuit facts come from the builder's
+bench notes. Nothing here was re-measured at the time of writing. Items marked **(unconfirmed)** were not recorded.
 
 Related: `docs/assembly.md` (plan for the soldered boards), `docs/wiring.md` (design guidance),
-`docs/logs/2026-11-02-power.md` (power and emitter measurements).
+`docs/hardware.md` (what was measured on the bench).
 
 ## 1. ESP32 (30-pin WROOM-32 dev board, USB-C)
 
@@ -47,7 +46,7 @@ Dome facing you, legs down, left to right: 1, 2, 3.
 - Pin 1 `OUT` -> GPIO34
 - Pin 2 `GND` -> GND
 - Pin 3 `VS` -> 3V3
-- No R-C filter on the supply (not mentioned by the tester).
+- No R-C filter on the supply (none recorded).
 
 ## 5. microSD module (6 pins, level shifter + 1117 regulator on board)
 - `VCC` -> VIN (5 V)
@@ -69,20 +68,20 @@ GPIO23 --[1 kohm]-- base --+                          emitter -- GND
 ```
 
 - GPIO23 -> 1 kΩ -> base.
-- 100 kΩ from base to GND: **fitted** (confirmed by the tester on 2026-11-03).
+- 100 kΩ from base to GND: **fitted** (confirmed on 2026-11-03).
 - Emitter -> GND.
 - Collector -> cathodes of both LEDs.
 - Each LED anode has its **own** 100 Ω resistor to VIN. Two LEDs in parallel branches.
 - Calculated peak current about 34 mA per LED, 68 mA total (Vf about 1.4 V and Vce about 0.2 V assumed, not measured).
-- Range seen with this configuration: TV responds at almost 2 m (no instrument, tester's report). Earlier
-  configurations and results are in `docs/logs/2026-11-02-power.md`.
+- Range seen with this configuration: TV responds at almost 2 m (no instrument, by eye). Earlier
+  configurations and results are in `docs/hardware.md`.
 - LED model, forward voltage and ratings are still unknown.
 
 ## 7. Battery voltage divider
 - XL6009 `IN+` -> 10 kΩ -> midpoint -> 10 kΩ -> GND.
 - Midpoint -> GPIO33.
 - Both resistors measured about 10 kΩ out of circuit.
-- 100 nF from the midpoint to GND: **fitted** (tester's reply "si lo puse" to the question about the 100 nF).
+- 100 nF from the midpoint to GND: **fitted**.
 - Firmware: `-DIRIS_BATTERY_RATIO_PERMILLE=2000`, set in the `esp32dev_ssd1306` environment.
 - Calibration: one comparison only (3.8 V on screen against 3.77 V on the multimeter). Compare again near 3.3 V and 4.2 V.
 
@@ -99,7 +98,7 @@ XL6009 OUT- ------------ ESP32 GND
 - The switch is a plain 2-pin on/off switch **between XL6009 `OUT+` and `VIN`**.
 - Consequence: the XL6009 and the divider stay connected to the cell when the switch is off (the divider alone draws about 190 µA).
 
-Decision for the real board (agreed in chat, not yet built):
+Decision for the real board (decided before the build):
 ```
 18650 --B+/B-- charger
 charger OUT+ --[switch]-- XL6009 IN+ (+ divider)

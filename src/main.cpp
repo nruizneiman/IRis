@@ -1,7 +1,6 @@
-// Stage 6 firmware: OLED + 5 buttons + UI + IR receive/transmit + LittleFS persistence, boot history, watchdog.
+// The firmware: OLED + 5 buttons + UI + IR receive/transmit + microSD + LittleFS persistence, boot history, watchdog.
 // Nothing is ever transmitted at boot: the emitter pin is driven low first and only a user action
-// (or a user-started exploration) submits a job. Everything here compiles; none of it has run on the
-// board yet (see docs/status.md).
+// (a button, a mode or an exploration the user started) submits a job. See docs/status.md.
 #include <Arduino.h>
 #include <esp_system.h>
 #include <esp_task_wdt.h>

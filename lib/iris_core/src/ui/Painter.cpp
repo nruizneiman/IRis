@@ -29,7 +29,7 @@ void Painter::rawText(int col, int row, std::string_view s) {
   display_.drawText(col * kCellW, row * kCellH, clipped.c_str(), FontSize::Small);
 }
 
-// Title bar: a lit bar across the panel with dark text, like the reference menu look the tester asked for.
+// Title bar: a lit bar across the panel with dark text, the look chosen for the menus.
 void Painter::title(std::string_view s) {
   mix("bar", 0, 0);
   display_.setDrawColor(true);

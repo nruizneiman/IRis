@@ -32,7 +32,7 @@ buttons have been used through the UI, but their per-key checks (test B4) are no
 | J_PWR (2) | 5 V from the XL6009 output, GND | to the board's VIN and GND |
 | J_BAT (1+GND) | switched battery (+) for the divider, GND | sense wire only; not the power path |
 
-## Power path (as tested on the bench on 2026-11-02, see `docs/logs/2026-11-02-power.md`)
+## Power path (as tested on the bench on 2026-11-02, see `docs/hardware.md`)
 ```
 18650 holder ── B+ / B-  (charger)  ── OUT+ ─ [power switch] ─ XL6009 IN+      XL6009 OUT+ (5.0 V) ── VIN
                                        OUT- ───────────────── XL6009 IN-      XL6009 OUT- ────────── GND
