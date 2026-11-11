@@ -1,8 +1,12 @@
 # Case: parametric model and print notes
 
-Status (2026-11-03): the case is modeled in Autodesk Fusion ("IRis Mando v2", project "IRis Control Remoto") and has
-**not been printed yet**. Everything below that says "estimated" was not measured. The Fusion file is not stored in
-this repository.
+The case is modeled in Autodesk Fusion ("IRis Mando v2", project "IRis Control Remoto"). The files are in
+[`case/`](../case): `IRis Mando v2.f3d` (Fusion, with the parameters described below), `IRis Mando v2.step` (neutral
+CAD format), `IRIS_Case.3mf` (print-ready export) and a preview image. The case is also on
+[MakerWorld](https://makerworld.com/en/models/3592563-iris-universal-ir-remote-case-esp32-oled).
+
+The notes below were written while the case was being printed and revised (the first print was on 2026-11-05).
+Everything that says "estimated" or "not tested in print" was not measured.
 
 ## How the size is decided
 
