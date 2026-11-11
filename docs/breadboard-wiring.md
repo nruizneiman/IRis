@@ -75,7 +75,7 @@ GPIO23 --[1 kohm]-- base --+                          emitter -- GND
 - Calculated peak current about 34 mA per LED, 68 mA total (Vf about 1.4 V and Vce about 0.2 V assumed, not measured).
 - Range seen with this configuration: TV responds at almost 2 m (no instrument, by eye). Earlier
   configurations and results are in `docs/hardware.md`.
-- LED model, forward voltage and ratings are still unknown.
+- LED model: TSAL6200 (940 nm, 5 mm, 100 mA continuous rating per its datasheet). The forward voltage on this unit was not measured.
 
 ## 7. Battery voltage divider
 - XL6009 `IN+` -> 10 kΩ -> midpoint -> 10 kΩ -> GND.

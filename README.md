@@ -1,5 +1,7 @@
 # IRis
 
+![IRis, the assembled remote: front view and side view with the power switch](docs/img/main.png)
+
 A programmable universal infrared remote you can build yourself: an ESP32, a small OLED, five buttons, a microSD
 card and one 18650 cell in a 3D-printed case.
 

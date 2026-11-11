@@ -11,7 +11,7 @@ Everything needed to build one IRis unit. Values come from the author's unit (`d
 | 1 | ESP32-WROOM-32 dev board, 30 pins, micro-USB | CP210x USB-serial. Pin sets vary between 30-pin boards: check yours against `include/board_pins.h` |
 | 1 | OLED 1.3" 128x64, I2C | SSD1306 (the author's) or SH1106; there is a firmware build for each (`docs/hardware.md`) |
 | 1 | TSOP38238 | 38 kHz IR receiver |
-| 2 | IR LED, 940 nm, 5 mm | Model and ratings were not recorded. About 34 mA each was calculated, not measured |
+| 2 | IR LED TSAL6200, 940 nm, 5 mm | Rated for 100 mA continuous. About 34 mA each was calculated, not measured |
 | 1 | NPN transistor 2N2222 (TO-92) | Drives the LEDs from 5 V. An IRFZ44N did not switch on from a 3.3 V GPIO |
 | 5 | Tactile switch, 6 x 6 mm | Up, down, left, right, OK |
 | 1 | microSD module, SPI, 6 pins | Optional: only for the card features |
@@ -69,6 +69,5 @@ PLA, 0.4 mm nozzle, 0.2 mm layers, no supports. Settings and the reasoning: `doc
 
 ## Not recorded
 
-The exact models of the IR LEDs, the rocker switch and the charger module were not written down. Any part with the
-same electrical role and size should do, but check the LED current before changing LEDs or resistors
-(`docs/hardware.md`).
+The exact models of the rocker switch and the charger module were not written down. Any part with the same
+electrical role and size should do. Check the LED current before changing LEDs or resistors (`docs/hardware.md`).
