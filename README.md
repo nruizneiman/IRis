@@ -69,7 +69,10 @@ one. Every document is listed in the [documentation index](docs/README.md).
 
 ## Build and flash
 
-You need Python 3 and a USB cable. The firmware is a [PlatformIO](https://platformio.org/) project; the versions it was
+**Without building:** each [release](https://github.com/nruizneiman/IRis/releases) has ready-made images for both
+display controllers, and its notes explain how to flash one from the browser or with `esptool`.
+
+**From source:** you need Python 3 and a USB cable. The firmware is a [PlatformIO](https://platformio.org/) project; the versions it was
 built with are in [dependencies](docs/firmware/dependencies.md).
 
 The commands below are for Windows PowerShell, which is what the project is developed on. On Linux or macOS the same
@@ -109,7 +112,8 @@ Five keys: **Up / Down** move, **OK** chooses or sends, **Left** goes back (hold
 | IR tools | Capture history, code exploration, export everything to the card |
 | Settings | Language, display, capture timeout, storage, diagnostics |
 
-To use Flipper-IRDB, copy its folders into `/irdb` on a FAT-formatted card. Exports are written to `/iris/export`.
+To use Flipper-IRDB, copy its folders into `/irdb` on a FAT32-formatted card, with a card reader or
+[over the USB cable](docs/firmware/ui.md#remotes-from-the-card). Exports are written to `/iris/export`.
 
 The full screen map, the modes and the limits are in the [interface guide](docs/firmware/ui.md).
 

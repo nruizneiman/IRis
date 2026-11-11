@@ -45,7 +45,7 @@ the restarted device finds a complete old or new library.
 ## What loading does
 
 The messages in quotes are shown at boot, here in their Spanish text; in English they read "Backup was used",
-"Lost: Sala", "Corrupt data: empty", "Not read: saving off" and "Newer data version".
+"Lost: Sala" (or "3 remotes lost"), "Corrupt data: empty", "Not read: saving off" and "Newer data version".
 
 | Situation | Result |
 |---|---|

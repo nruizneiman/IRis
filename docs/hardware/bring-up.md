@@ -49,6 +49,11 @@ Software: `pio run -e bench -t upload` (serial console, 115200 baud; type `h`), 
 | `n` | one NEC frame (address 0x00, command 0x08) |
 | `x` | **loopback**: receiver on, send one NEC frame, report what the receiver decoded |
 | `g` | emitter pin high for 3 s (DC measurements; only with the series resistor fitted) |
+| `s` | microSD probe: mount, card type and size, list of the root folder (read only) |
+| `sdls [folder]` | list a folder under `/irdb` (40 entries at most) |
+| `sdcrc <path>` | size and CRC32 of a file under `/irdb` |
+| `sdput <size> <crc32> <path>` | receive a file from the PC into `/irdb` (used by `tools/irdb_upload.py`) |
+| `sdformat ERASE-ALL` | like `s`, but **formats the card** if it has no FAT volume |
 
 ---
 
@@ -133,18 +138,28 @@ Wiring: [IR receiver](wiring.md#ir-receiver), powered from 3V3. Console.
 
 **Pass:** idle high, quiet when no remote, correct decode of at least one known remote, learn/store/reboot consistent. **If it fails:** no edges: check VS/GND/OUT pin order against the datasheet (a swapped pair can destroy the part); constant edges: ripple or ambient noise, add the supply filter of the [design notes](design-notes.md#ir-receiver-tsop38238) or move away from the display cable; wrong decode: log the raw data and compare with the protocol; do not edit the catalogue without the cross-check tests.
 
+## Card (optional)
+
+Not a numbered block: the card is not needed by the blocks that follow. Wiring: [microSD module](wiring.md#microsd-module).
+
+1. Console `s` with a FAT32 card in: it mounts, prints the card type and size and lists the root folder.
+2. Full firmware: *Remotes* lists the folders of `/irdb`, marked `SD`.
+
+**If it fails:** `mount failed` means no card, a wiring or supply problem, or a card that is not FAT16 / FAT32. The
+module of the author's unit is powered from 5 V: a module without a regulator needs 3.3 V instead.
+
 ## B6. Emitter driver without any LED
 
-Wiring: the driver transistor with its series and pull-down resistors as in [IR emitter](wiring.md#ir-emitter), but with the LEDs replaced by a **resistor load** (a measured resistor of about 100 Ω rated 0.5 W or more, from the 5 V of the USB board to the drain or collector: 5 V / 100 Ω = 50 mA). Scope on the drain if available.
+Wiring: the driver transistor with its series and pull-down resistors as in [IR emitter](wiring.md#ir-emitter), but with the LEDs replaced by a **resistor load** (a measured resistor of about 100 Ω rated 0.5 W or more, from the 5 V of the USB board to the drain or collector: 5 V / 100 Ω = 50 mA). Scope on the drain or collector if available.
 
 1. Boot: the drain or collector stays at 5 V (transistor off), GPIO23 about 0 V. Press EN: still off. (The pull-down works.)
 2. `arm`, `g`: for 3 s measure the voltage at GPIO23 (about 3.3 V), the drop across the transistor (Vds, or Vce for an NPN) and the current through the load. For a MOSFET compute `Rds_on = Vds / I` and compare with the datasheet of the part.
 3. Repeat step 2 with each transistor you intend to use.
-4. `arm`, `t 5`: scope on the drain: 2 ms packets of a square wave, period about 26.3 µs (38 kHz), duty about 33 % *(library default; proposed tolerance +/-5 % on frequency)*, 5 packets, then silence; GPIO23 returns to 0 V.
+4. `arm`, `t 5`: scope on the drain or collector: 2 ms packets of a square wave, period about 26.3 µs (38 kHz), duty about 33 % *(library default; proposed tolerance +/-5 % on frequency)*, 5 packets, then silence; GPIO23 returns to 0 V.
 5. `arm`, `n`: the NEC pattern: leader mark about 9 ms, space 4.5 ms, then 32 bit pairs. Measure the leader length.
 6. Feel the transistor after a few commands: not warm.
 
-**Pass:** off at boot and reset; drop across the transistor *(proposed)* <= 0.2 V at the chosen load current; frequency within tolerance; no heating. **If a unit fails (drop high or erratic):** that part does not switch on fully from 3.3 V. This happened on the author's unit with two IRFZ44N; use an NPN such as the 2N2222, or a logic-level MOSFET that you checked in its datasheet ([design notes](design-notes.md#choosing-the-transistor)), and repeat B6. **If the drain is never off:** missing pull-down or wrong pin.
+**Pass:** off at boot and reset; drop across the transistor *(proposed)* <= 0.2 V at the chosen load current; frequency within tolerance; no heating. **If a unit fails (drop high or erratic):** that part does not switch on fully from 3.3 V. This happened on the author's unit with two IRFZ44N; use an NPN such as the 2N2222, or a logic-level MOSFET that you checked in its datasheet ([design notes](design-notes.md#choosing-the-transistor)), and repeat B6. **If the transistor is never off:** missing pull-down or wrong pin.
 
 ### B6 with a multimeter only (no oscilloscope)
 
@@ -207,7 +222,7 @@ Do this as separate sub-blocks. Attended, on a non-flammable surface. Skip any s
 
 Full firmware on the final wiring.
 
-1. Create 2 controls with 5 buttons each (learn 3, manual 2); reboot; everything is present. Send each button.
+1. Create 2 remotes with 5 buttons each (learn 3, manual 2); reboot; everything is present. Send each button.
 2. Storage power-cut test: create, edit and save about 20 times while removing power at random moments, some of them while it saves. After each boot the library loads (from the current or the backup index; the boot message says which). Record any message about a lost remote or corrupted data, with the number of cuts. If *Settings > Storage* says `FLASH NOT MOUNTED!`, the partition is unformatted: format it from that screen.
 3. *Settings > Diagnostics > Status*: note `Heap` (free and minimum) after boot and after a long session. If the minimum free heap is below about 60 KB, report it: the memory budget of [persistence](../firmware/persistence.md) needs revisiting.
 4. Endurance: 1 hour with the screen on, 100 sends, 2 captures every 10 minutes: no unexpected resets, no watchdog entry, no display glitches.

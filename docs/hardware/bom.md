@@ -18,7 +18,7 @@ Everything needed to build one IRis unit, as used in the author's unit. How the 
 | 1 | microSD card, FAT | Optional |
 | 1 | 18650 cell | |
 | 1 | 18650 holder | The case is sized for 76 x 21.2 x 19.7 mm |
-| 1 | USB-C charger module with protection (TP4056 class) | About 26.8 x 17.3 mm. No power path: charge with the device off |
+| 1 | USB-C charger module with protection (TP4056 class) | About 27.8 x 17.4 mm. No power path: charge with the device off |
 | 1 | XL6009 boost converter | Set to 5.0 V before connecting the ESP32 |
 | 1 | Rocker switch | Window in the case 8.3 x 13.1 mm. Goes between the charger and the XL6009 |
 

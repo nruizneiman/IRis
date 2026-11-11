@@ -73,6 +73,17 @@ remote are both a `RemoteView` (`app/RemoteView.h`), and the modes only see that
 - *» Import folder*, the first row of every card folder, turns every `.ir` file directly in it into a saved remote, in
   a new category named after the folder or in an existing one. It imports one file per tick, so Left can stop it.
 
+**Loading the card.** Format it as FAT32 and put the `.ir` files under `/irdb`, keeping the folders of Flipper-IRDB.
+Either copy them with a card reader, or send them over the USB cable with the board running the `bench` firmware:
+
+```powershell
+python tools/irdb_select.py <Flipper-IRDB folder> --only TVs > files.txt
+python tools/irdb_upload.py COM5 <Flipper-IRDB folder> --list files.txt --skip-existing
+```
+
+`irdb_select.py` lists the files that fit the limits (64 KB per file, a path of 96 characters) and `irdb_upload.py`
+copies them with a checksum per file. Flash the normal firmware again afterwards.
+
 **Export.** *IR tools > Export all to SD*, and *Export to SD* in the menu of a remote or a category, write Flipper `.ir`
 files to `/iris/export/<category>/<remote>.ir` (`import/FlipperIrWriter.h`, the mirror of the importer).
 
