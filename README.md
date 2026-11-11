@@ -49,6 +49,11 @@ The printable case is on [**MakerWorld**](https://makerworld.com/en/models/35925
 
 Wiring and assembly:
 
+![Connection diagram: ESP32, OLED, buttons, receiver, microSD, IR emitter, battery divider and power chain](docs/img/schematic.png)
+
+The diagram is a KiCad 10 file ([`docs/schematic/IRis.kicad_sch`](docs/schematic/IRis.kicad_sch), also as
+[PDF](docs/schematic/IRis.pdf)). It was drawn from the wiring record below, so it carries the same unknowns.
+
 | Document | What it is |
 |---|---|
 | [`docs/bom.md`](docs/bom.md) | Bill of materials: parts, quantities, screws and printed pieces |
