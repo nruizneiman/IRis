@@ -1,7 +1,7 @@
-# Wokwi project (prepared, NOT yet validated)
+# Wokwi project (prepared, never validated)
 
-Status: the files here were written from Wokwi's public documentation but **have not been opened
-in Wokwi** (no Wokwi account/CLI token was used in Stage 3). Part ids and pin names must be
+The files here were written from the public documentation of Wokwi but **have never been opened in Wokwi**. They also
+predate the microSD module and the battery divider, which are not in the diagram. Part ids and pin names must be
 checked the first time you open `diagram.json`:
 
 - `board-ssd1306`, `wokwi-pushbutton`, `wokwi-ir-receiver`, `wokwi-led`: ids and pin names confirmed in the docs
@@ -21,7 +21,7 @@ checked the first time you open `diagram.json`:
 | IR transmitter | The LED here is only an indicator on the TX GPIO | No 38 kHz IR optics, MOSFET stage, LED current, supply sag or range. |
 | Battery, charger, brownout | No | Test on hardware. |
 
-Wokwi never replaces the electrical and optical tests in the physical test plan.
+Wokwi never replaces the electrical and optical tests of the [bring-up guide](../docs/hardware/bring-up.md).
 
 ## Use
 
@@ -30,6 +30,5 @@ Wokwi never replaces the electrical and optical tests in the physical test plan.
 ```
 
 Then open the `wokwi/` folder with the Wokwi for VS Code extension ("Wokwi: Start Simulator"), or
-paste `diagram.json` into a new ESP32 project on wokwi.com. The Stage 4 firmware runs the full UI on the simulated
-SSD1306 and the five buttons (IR capture/send report "no disponible" until Stage 5; storage is RAM only).
-This has not been run in Wokwi yet.
+paste `diagram.json` into a new ESP32 project on wokwi.com. This has not been run in Wokwi yet, so what the
+firmware does there (the simulated receiver, storage, the missing card) is unknown.

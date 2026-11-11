@@ -1,6 +1,6 @@
 // Bring-up bench: a serial console to check one hardware block at a time, without the UI, the
 // library or storage. Flash it with `pio run -e bench -t upload`, open the monitor at 115200 and type
-// `h`. See docs/physical-test-plan.md for what to expect from each command.
+// `h`. See docs/hardware/bring-up.md for what to expect from each command.
 //
 // Safety: every command that can drive the emitter is bounded (see the limits below) and needs a
 // fresh `arm` first; it disarms itself afterwards. The emitter pin is driven low at boot and nothing

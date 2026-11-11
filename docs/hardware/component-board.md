@@ -1,8 +1,13 @@
-# Component board ("plaquita"): size, hole map and wiring
+# Component board
 
-Status (2026-11-04): **designed, not built.** The hole map below was checked only against a few layout rules (no part on a
-screw keep-out cell, no part body over another part's lead, no unintended neighbouring pads of different nets). Nothing was
-tested electrically. Check polarities and every neighbour of a critical pad with a multimeter before connecting the battery.
+A small perfboard that holds the loose parts: the emitter transistor and its resistors, the LED resistors, the battery
+divider and the bulk capacitor. It also carries the 5 V and ground rails that everything else is wired to. The circuit
+is in [wiring](wiring.md).
+
+This is the layout the author's unit was built from. The hole map was checked against a few layout rules (no part on a
+screw keep-out cell, no part body over the lead of another part, no neighbouring pads of different nets by accident),
+and the unit works. The soldered board was not compared pad by pad with this document afterwards, so check the
+polarities and every neighbour of a critical pad with a multimeter before connecting the battery.
 
 ## The board
 
@@ -14,7 +19,7 @@ tested electrically. Check polarities and every neighbour of a critical pad with
 - The posts are 20.32 mm apart across and 38.1 mm along. Across, they sit `plq_hole_inset_x` from the pocket edge
   (4.24 mm, assuming the 11 columns are centred in the 28.8 mm width); along, `plq_hole_inset` (3.81 mm). If your cut is
   not centred, change the parameters.
-- Mount with **M3 x 5 mm** screws (the case was first drawn for M2 x 5; see `case-print.md`) in four holes drilled at
+- Mount with **M3 x 5 mm** screws (the case was first drawn for M2 x 5; see [case](case.md)) in four holes drilled at
   **3.2 mm** in cells **B2, J2, B17 and J17** (the second hole from each corner; the holes are 20.32 mm apart across
   and 38.1 mm along). A 5.5 mm head covers the cells next to the hole, which are free anyway.
 - Keep the five cells around each screw hole free of solder (the hole and its four orthogonal neighbours): the plastic
@@ -81,7 +86,7 @@ Two short bare-wire links on the copper side: **K10 to K8** (transistor emitter 
 K9 becomes GND and stays unused) and **I13 to J12** (R_b to the base), made as an L-shaped wire over I13, J13 and J12
 (J13 becomes part of the base net; keep K13 free).
 
-## Wires to the rest of the case (soldered)
+## Wires to the rest of the case
 
 | Pad | Goes to |
 |---|---|
@@ -98,7 +103,9 @@ K9 becomes GND and stays unused) and **I13 to J12** (R_b to the base), made as a
 | G11 | ESP32 GPIO33 |
 | C12 | XL6009 IN+ (battery side, after the power switch) |
 
-The ESP32 3V3 does not go through the board: ESP32 3V3 to the OLED VCC, and from the OLED VCC to the TSOP VS.
+The wires are soldered to the pads. The ESP32 3V3 does not go through the board: ESP32 3V3 to the OLED VCC, and from
+the OLED VCC to the TSOP VS. The button signals, the I2C lines, the receiver output and the SPI lines go straight from
+each module to the ESP32.
 
 ## Cautions
 

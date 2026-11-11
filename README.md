@@ -9,8 +9,8 @@ IRis learns the buttons of the remotes you already have, sends them back, and ca
 [Flipper-IRDB](https://github.com/Lucaslhm/Flipper-IRDB) collection straight from the card.
 
 > **Status:** the author's unit is assembled in its printed case, runs from the battery and works. It was
-> validated with a multimeter and by using it, not with lab instruments, and the build guides are still closer to an
-> engineering notebook than to a step-by-step manual. See [What works and what does not](#what-works-and-what-does-not).
+> validated with a multimeter and by using it, not with lab instruments. See
+> [What works and what does not](#what-works-and-what-does-not).
 
 ## What it does
 
@@ -44,31 +44,33 @@ asks first. Use it on equipment that is yours.
 | Two 10 kΩ resistors | Optional: battery level on screen |
 | Perfboard, pin headers, M3 screws | |
 
-The printable case is on [**MakerWorld**](https://makerworld.com/en/models/3592563-iris-universal-ir-remote-case-esp32-oled#profileId-4115008). How it is designed and how to print it:
-[`docs/case-print.md`](docs/case-print.md).
+The complete list, with quantities and screws, is the [parts list](docs/hardware/bom.md).
 
-Wiring and assembly:
+The printable case is on
+[**MakerWorld**](https://makerworld.com/en/models/3592563-iris-universal-ir-remote-case-esp32-oled#profileId-4115008),
+and its Fusion and STEP files are in [`case/`](case).
 
 ![Connection diagram: ESP32, OLED, buttons, receiver, microSD, IR emitter, battery divider and power chain](docs/img/schematic.png)
 
-The diagram is a KiCad 10 file ([`docs/schematic/IRis.kicad_sch`](docs/schematic/IRis.kicad_sch), also as
-[PDF](docs/schematic/IRis.pdf)). It was drawn from the wiring record below, so it carries the same unknowns.
+The diagram is also a KiCad file and a PDF in [`docs/schematic/`](docs/schematic).
+
+To build a unit, read these in order:
 
 | Document | What it is |
 |---|---|
-| [`docs/bom.md`](docs/bom.md) | Bill of materials: parts, quantities, screws and printed pieces |
-| [`docs/wiring.md`](docs/wiring.md) | The design guide: every block, the safety rules and the reasoning |
-| [`docs/breadboard-wiring.md`](docs/breadboard-wiring.md) | The circuit exactly as it was wired and worked on the bench |
-| [`docs/plaquita.md`](docs/plaquita.md), [`docs/assembly.md`](docs/assembly.md) | The soldered component board and the connectors |
-| [`docs/hardware.md`](docs/hardware.md) | What was measured, how to identify your OLED, first checks on a new board |
-| [`docs/physical-test-plan.md`](docs/physical-test-plan.md) | Bring-up of a new unit, block by block |
+| [Parts list](docs/hardware/bom.md) | Every part, with quantities, screws and printed pieces |
+| [Wiring](docs/hardware/wiring.md) | The circuit: pin map, each block and the safety rules |
+| [Component board](docs/hardware/component-board.md) | The small soldered board, hole by hole |
+| [Case](docs/hardware/case.md) | Print settings, how the modules are held, how to adapt it to your parts |
+| [Bring-up](docs/hardware/bring-up.md) | Powering up a new unit one block at a time |
 
-A lithium cell stores a lot of energy: read the safety rules at the top of `docs/wiring.md` before connecting one.
+A lithium cell stores a lot of energy: read the [safety rules](docs/hardware/wiring.md#safety-rules) before connecting
+one. Every document is listed in the [documentation index](docs/README.md).
 
 ## Build and flash
 
 You need Python 3 and a USB cable. The firmware is a [PlatformIO](https://platformio.org/) project; the versions it was
-built with are in [`docs/dependencies.md`](docs/dependencies.md).
+built with are in [dependencies](docs/firmware/dependencies.md).
 
 The commands below are for Windows PowerShell, which is what the project is developed on. On Linux or macOS the same
 `pio` commands work with `.venv/bin/pio`.
@@ -77,7 +79,7 @@ The commands below are for Windows PowerShell, which is what the project is deve
 python -m venv .venv
 .\.venv\Scripts\pip install platformio
 
-# Not sure which controller your OLED has? This shows a test picture with both drivers.
+# Not sure which controller your OLED has? This shows a test picture with both drivers (see the bring-up guide).
 .\.venv\Scripts\pio.exe run -e display_probe -t upload
 
 # Build and flash: esp32dev_ssd1306 for an SSD1306 panel, esp32dev for an SH1106 one
@@ -90,7 +92,8 @@ The `esp32dev_ssd1306` build expects the battery divider on GPIO33. Without it t
 out of the build, remove the `IRIS_BATTERY_RATIO_PERMILLE` line in [`platformio.ini`](platformio.ini).
 
 There is also a serial console that tests one hardware block at a time (I2C, buttons, receiver, emitter, card, ADC):
-`pio run -e bench -t upload`, then `pio device monitor`. Its commands are in the test plan.
+`pio run -e bench -t upload`, then `pio device monitor`. Its commands are in the
+[bring-up guide](docs/hardware/bring-up.md#bench-console-commands).
 
 ## Using it
 
@@ -108,7 +111,7 @@ Five keys: **Up / Down** move, **OK** chooses or sends, **Left** goes back (hold
 
 To use Flipper-IRDB, copy its folders into `/irdb` on a FAT-formatted card. Exports are written to `/iris/export`.
 
-The full screen map and the rules of the interface are in [`docs/ui.md`](docs/ui.md).
+The full screen map, the modes and the limits are in the [interface guide](docs/firmware/ui.md).
 
 ## What works and what does not
 
@@ -126,8 +129,7 @@ Known limits:
 - **Battery percentage is an estimate** from a generic lithium-ion curve.
 - A second receiver and a second emitter channel have pins reserved but are not implemented.
 
-The complete list is in [`docs/risks.md`](docs/risks.md), and the state of each part in
-[`docs/status.md`](docs/status.md).
+The complete list is in [limitations](docs/limitations.md), and the state of each part in [status](docs/status.md).
 
 ## Developing
 
@@ -167,8 +169,8 @@ Rules of the code base:
 - A passing PC test never means "works on hardware".
 - Do not run `pio pkg install --library` here: it rewrites `platformio.ini` and drops its comments.
 
-More detail: [`docs/persistence.md`](docs/persistence.md) (storage format and recovery),
-[`docs/ir-notes.md`](docs/ir-notes.md) (the IR layer and its limits).
+More detail: [interface](docs/firmware/ui.md) (the rules the screens follow), [persistence](docs/firmware/persistence.md)
+(storage format and recovery), [IR layer](docs/firmware/ir.md) (sending, receiving and the emitter limits).
 
 ## Licence and credits
 

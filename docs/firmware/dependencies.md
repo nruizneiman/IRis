@@ -1,6 +1,6 @@
 # Dependencies
 
-## Verified in Stage 2 (resolved and used in a successful build)
+## Versions the project is built with
 
 | Item | Version | Where | Evidence |
 |---|---|---|---|
@@ -9,19 +9,19 @@
 | Arduino-ESP32 core | 2.0.17 | installed `framework-arduinoespressif32` reports `3.20017.241212` | package.json (PlatformIO encodes 2.0.17 as 3.20017.x) |
 | Xtensa GCC | 8.4.0 (2021r2-patch5) | PlatformIO package | package.json |
 | ArduinoJson | 7.4.2 (pinned in `lib_deps` and vendored for the host build) | firmware + `third_party/` | firmware built; host tests pass |
-| U8g2 | 2.36.18 (pinned in `lib_deps`) | firmware | all three firmware environments built; drawing API names (`drawGlyph`, `setFontPosTop`, `sendF`, both `U8G2_SH1106/SSD1306_128X64_NONAME_F_HW_I2C` classes) compiled. Behaviour on the panel NOT verified. |
-| IRremoteESP8266 | 2.9.0 (pinned in `lib_deps`) | firmware + PC cross-check | API read from the installed sources; all environments build; host cross-check passes (`docs/ir-notes.md`). Behaviour on the ESP32 NOT verified. |
-| LittleFS | part of Arduino-ESP32 2.0.17 | firmware | compiles; mount/rename behaviour NOT verified on hardware |
+| U8g2 | 2.36.18 (pinned in `lib_deps`) | firmware | all firmware environments build. In use on an SSD1306 panel; the SH1106 class compiles but was never tried on such a panel |
+| IRremoteESP8266 | 2.9.0 (pinned in `lib_deps`) | firmware + PC cross-check | API read from the installed sources; all environments build; the PC cross-check passes ([IR layer](ir.md)). In use on the device, where only NEC remotes were confirmed |
+| LittleFS | part of Arduino-ESP32 2.0.17 | firmware | in use on the device; its behaviour under a power cut was not provoked there |
 | doctest | 2.4.11 (vendored) | `third_party/doctest` | host tests pass |
 | Host compiler | GCC 16.2.0 (WinLibs MinGW-w64 UCRT) | winget | `g++ --version` |
 
-## Not yet verified / chosen
+## Not verified
 
 | Item | State |
 |---|---|
 | IRremoteESP8266 with core 3.x | Unknown; the project stays on core 2.0.17 |
-| U8g2 font `u8g2_font_5x8_tf` | Compiles; that it renders every Spanish glyph used (n-tilde, accents, inverted ! ?) must be checked on the panel |
-| Wokwi | Documentation lists SSD1306 and a 38 kHz IR receiver; SH1106 unsupported; project never opened |
+| U8g2 font `u8g2_font_5x8_tf` | The menus read well on the panel; that it renders every Spanish glyph used (n-tilde, accents, inverted ! ?) was not checked one by one |
+| Wokwi | Its documentation lists the SSD1306 and a 38 kHz IR receiver, and no SH1106. The project in `wokwi/` was never opened |
 | Library sources on the PC | `test/hostlib` reads them from `.pio/libdeps/esp32dev/IRremoteESP8266` (created by `pio run`); not vendored because of the LGPL licence and size |
 
 ## Flipper-IRDB (data, not linked code)

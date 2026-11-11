@@ -1,4 +1,6 @@
-# Physical test log (copy this file for each session)
+# Bring-up log (copy this file for each session)
+
+The blocks are those of the [bring-up plan](bring-up.md).
 
 Date: ____  Tester: ____  Firmware (`git`/build id or date): ____  Environment: `esp32dev` / `esp32dev_ssd1306` / `bench`
 
@@ -13,7 +15,7 @@ scope captures by file name.
 |---|---|---|---|
 | R1 ... | | | |
 | IR LED #1 | | Vf @ 1 mA = | |
-| MOSFET #1 | | | |
+| Driver transistor #1 | | | |
 | TSOP #1 | | | |
 | Cell | | V = | protected? |
 | Charge module | chips: | | |
@@ -31,10 +33,10 @@ scope captures by file name.
 | B5 | Idle OUT level | ~3.3 V | | | |
 | B5 | `l` edges in quiet | ~0 | | | |
 | B5 | Reference remote decoded | protocol / address / command | | | |
-| B6 | Drain off at boot / reset | yes | | | |
-| B6 | Vds at ___ mA | <= 0.2 V | | | |
+| B6 | Emitter off at boot / reset | yes | | | |
+| B6 | Transistor drop at ___ mA | <= 0.2 V | | | |
 | B6 | Carrier frequency | ~38 kHz +/-5 % | | | |
-| B7 | R_led used | | | | |
+| B7 | LED resistor used | | | | |
 | B7 | DC current | <= target | | | |
 | B7 | Loopback max distance (OK) | | | | |
 | B8 | Target device response (per distance/angle) | | | | |

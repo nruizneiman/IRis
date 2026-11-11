@@ -8,7 +8,7 @@
 #include "hardware/IDisplay.h"
 
 // OLED 128x64 over I2C. The controller family is a build-time choice because the real panel is
-// unconfirmed (see docs/hardware.md): -DIRIS_DISPLAY_SH1106 or -DIRIS_DISPLAY_SSD1306.
+// unconfirmed (see docs/hardware/bring-up.md): -DIRIS_DISPLAY_SH1106 or -DIRIS_DISPLAY_SSD1306.
 #if defined(IRIS_DISPLAY_SSD1306)
 using IrisPanel = U8G2_SSD1306_128X64_NONAME_F_HW_I2C;
 static constexpr const char* kIrisPanelName = "SSD1306 (probado)";  // identified with display_probe

@@ -1,4 +1,7 @@
-# Persistence (Stage 6)
+# Persistence
+
+How remotes and settings are stored in the flash of the ESP32, and what happens when a file is damaged or the power is
+cut during a save.
 
 Source: `lib/iris_core/src/persistence/`, `app/Boot.*`. Tests: `test/unit/test_persistence.cpp`,
 `test_power_cut.cpp`, `test_boot.cpp`. The store itself (`IBlobStore`) is LittleFS on the device
@@ -8,11 +11,11 @@ Source: `lib/iris_core/src/persistence/`, `app/Boot.*`. Tests: `test/unit/test_p
 
 Parsing JSON needs RAM proportional to the file. A single library file at the configured limits would
 not be safe on an ESP32 (about 200-250 KB of free heap, unverified). With one file per remote the
-peak is bounded by the largest remote (<= 40 buttons, <= 4000 RAW entries): measured on the PC with
+peak is bounded by the largest remote (256 buttons and 4000 RAW entries at most): measured on the PC with
 a counting allocator the worst case is below 96 KB for text + parsed document, and the 64-bit PC
-overestimates the 32-bit device (`worst-case remote file stays within the RAM budget`). The firmware also
-checks `ESP.getMaxAllocHeap()` before saving (`UiContext::persist`) and the Diagnóstico screen prints
-`Heap libre / mínimo` so the assumption can be checked on the board.
+overestimates the 32-bit device (test `worst-case remote file stays within the RAM budget`). The firmware also
+checks `ESP.getMaxAllocHeap()` before saving (`UiContext::persist`), and *Settings > Diagnostics > Status* shows the
+free and minimum heap so that the assumption can be checked on the board.
 
 ## Layout
 
@@ -41,6 +44,9 @@ the restarted device finds a complete old or new library.
 
 ## What loading does
 
+The messages in quotes are shown at boot. They are in Spanish in both languages: they are not in the translation
+catalog yet.
+
 | Situation | Result |
 |---|---|
 | Nothing stored | Empty library |
@@ -62,14 +68,16 @@ replaces. Files with a higher version are refused, never guessed.
 
 ## Flash wear (estimate, unverified)
 
-A save rewrites the index (about 3-6 KB) plus the remotes that changed (up to roughly 25-45 KB each in the
-worst case) and the backup index. With LittleFS wear levelling over a ~1.4 MB partition and a typical
+A save rewrites the index (about 3-6 KB) plus the remotes that changed (tens of KB each in the worst case) and
+the backup index. With LittleFS wear levelling over a ~1.4 MB partition and a typical
 edit touching one remote, 10 000 saves is roughly a few hundred full-partition writes, far below the
 100 000 erase cycles usually quoted for NOR flash. This is arithmetic, not a measurement.
 
 ## Not covered
 
-- A power cut inside `rename()` itself is the file system's responsibility (littlefs documents it as atomic);
-  only a real power-cut test can confirm it on this board (`docs/hardware.md`).
-- Several wrongly-damaged remote files at once are reported but not repaired.
-- No export/import of the library to a PC yet.
+- A power cut inside `rename()` itself is the responsibility of the file system (littlefs documents it as atomic).
+  Only a real power-cut test can confirm it on the board, and it was not provoked on the author's unit
+  ([bring-up](../hardware/bring-up.md), block B10).
+- Several damaged remote files at once are reported but not repaired.
+- There is no backup to a PC. The library leaves the device only as Flipper `.ir` files exported to the card, which
+  carry the signals but not this storage format.

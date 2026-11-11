@@ -13,7 +13,7 @@
 //   write -> "<key>.tmp" (fully written, size verified) -> rename over "<key>".
 // A power cut leaves either the old file or the new one; leftover ".tmp" files are removed at mount.
 // ASSUMPTION TO VERIFY ON HARDWARE: rename() onto an existing file is atomic in this LittleFS port
-// (documented behaviour of littlefs; run the power-cut test in docs/hardware.md).
+// (documented behaviour of littlefs; run the power-cut test in docs/hardware/bring-up.md).
 //
 // If the partition cannot be mounted (never formatted, or damaged) the store does NOT format by
 // itself: it falls back to RAM so the device stays usable, reports degraded(), and the user can

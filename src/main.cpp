@@ -49,7 +49,7 @@ struct Device {
   U8g2Display display;
   SdFileSource sd;
 #ifdef IRIS_BATTERY_RATIO_PERMILLE
-  AdcBatteryMonitor battery;  // divider on GPIO33 (docs/wiring.md 4.6)
+  AdcBatteryMonitor battery;  // divider on GPIO33 (docs/hardware/wiring.md)
 #else
   NoBatteryMonitor battery;
 #endif

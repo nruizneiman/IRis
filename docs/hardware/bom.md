@@ -1,7 +1,7 @@
 # Bill of materials
 
-Everything needed to build one IRis unit. Values come from the author's unit (`docs/breadboard-wiring.md`,
-`docs/hardware.md`) and from the case model (`docs/case-print.md`). The case is on
+Everything needed to build one IRis unit, as used in the author's unit. How the parts connect is in
+[wiring](wiring.md); the case is described in [case](case.md) and published on
 [MakerWorld](https://makerworld.com/en/models/3592563-iris-universal-ir-remote-case-esp32-oled).
 
 ## Electronics
@@ -9,7 +9,7 @@ Everything needed to build one IRis unit. Values come from the author's unit (`d
 | Qty | Part | Notes |
 |---|---|---|
 | 1 | ESP32-WROOM-32 dev board, 30 pins, micro-USB | CP210x USB-serial. Pin sets vary between 30-pin boards: check yours against `include/board_pins.h` |
-| 1 | OLED 1.3" 128x64, I2C | SSD1306 (the author's) or SH1106; there is a firmware build for each (`docs/hardware.md`) |
+| 1 | OLED 1.3" 128x64, I2C | SSD1306 (the author's) or SH1106; there is a firmware build for each ([how to tell](bring-up.md#identify-the-oled-controller)) |
 | 1 | TSOP38238 | 38 kHz IR receiver |
 | 2 | IR LED TSAL6200, 940 nm, 5 mm | Rated for 100 mA continuous. About 34 mA each was calculated, not measured |
 | 1 | NPN transistor 2N2222 (TO-92) | Drives the LEDs from 5 V. An IRFZ44N did not switch on from a 3.3 V GPIO |
@@ -31,15 +31,16 @@ Everything needed to build one IRis unit. Values come from the author's unit (`d
 | 1 | Resistor 100 kohm | Base to GND (pull-down) |
 | 2 | Resistor 10 kohm | Battery divider. Optional: without it the screen shows `Bat n/a` |
 | 1 | Capacitor 100 nF | Divider midpoint to GND. Optional, with the divider |
-| 1 to 2 | Electrolytic capacitor 100 uF | Supply filtering. Mind the polarity. The author's unit has one or two; their exact position was not recorded |
+| 1 | Electrolytic capacitor 100 uF | Across the 5 V rail on the component board. Mind the polarity |
 
 ## Assembly
 
 | Qty | Part | Notes |
 |---|---|---|
-| 1 | Perfboard for the components | Cut by hand (`docs/plaquita.md`) |
+| 1 | Perfboard for the components | Cut to 45.9 x 28.8 mm, 18 x 11 holes ([component board](component-board.md)) |
 | 1 | Perfboard for the buttons | Cut to 23.7 x 23.7 mm |
-| - | Hook-up wire, pin headers, connectors | The connectors used are listed in `docs/assembly.md` |
+| 2 | Female pin header, 1 x 15, 2.54 mm | Sockets for the ESP32 board |
+| - | Hook-up wire | Soldered between the modules and the component board |
 | - | Solder, heat-shrink tubing | |
 
 ## Screws (M3, threaded into PLA, 2.5 mm pilot holes)
@@ -65,9 +66,10 @@ The counts come from the screw posts of the model: check them against your own p
 | 1 | OK key | Flange on the bed |
 | 4 | OLED washers | Optional, 100 % infill |
 
-PLA, 0.4 mm nozzle, 0.2 mm layers, no supports. Settings and the reasoning: `docs/case-print.md`.
+PLA, 0.4 mm nozzle, 0.2 mm layers, no supports. Settings and the reasoning: [case](case.md).
 
 ## Not recorded
 
 The exact models of the rocker switch and the charger module were not written down. Any part with the same
-electrical role and size should do. Check the LED current before changing LEDs or resistors (`docs/hardware.md`).
+electrical role and size should do. Check the LED current before changing LEDs or resistors
+([measurements](measurements.md)).

@@ -1,5 +1,5 @@
 // Central place for every capacity limit. PROVISIONAL values: they protect RAM and flash and
-// must be re-evaluated with measurements on real hardware (see docs/risks.md).
+// must be re-evaluated with measurements on real hardware (see docs/limitations.md).
 #pragma once
 
 #include <cstddef>

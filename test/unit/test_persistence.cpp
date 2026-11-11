@@ -406,7 +406,7 @@ TEST_CASE("legacy: damaged legacy files are an error, not an empty library") {
 TEST_CASE("worst-case remote file stays within the RAM budget on the ESP32") {
   // A remote that fills every limit: the maximum number of buttons, all with a learned signal, using the
   // whole per-remote RAW budget. Budget: file text + the parsed JSON document <= 96 KB (the ESP32 has
-  // roughly 200-250 KB of free heap with the UI running; unverified, see docs/risks.md). Heap use is
+  // roughly 200-250 KB of free heap with the UI running; unverified, see docs/limitations.md). Heap use is
   // measured with a counting allocator (alloc_probe.cpp); a 64-bit PC overestimates the 32-bit device.
   RemoteLibrary lib;
   Id cat = lib.addCategory("TV").value();

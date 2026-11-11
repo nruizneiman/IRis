@@ -19,7 +19,7 @@
 //
 // Safety limits below are PROVISIONAL and independent of what the caller asks for. They exist so
 // a bug cannot hold the emitter on; the right numbers depend on the LED, resistor and MOSFET stage
-// that have not been identified yet (see docs/hardware.md, physical test plan).
+// that have not been identified yet (see docs/firmware/ir.md and docs/hardware/bring-up.md).
 struct TxSafety {
   uint32_t maxMarkUs = 25000;       // longest single carrier burst accepted (NEC leader is ~9 ms)
   uint32_t maxSequenceMs = 3000;    // estimated on-air time of one job
