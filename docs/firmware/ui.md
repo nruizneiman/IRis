@@ -69,6 +69,9 @@ remote are both a `RemoteView` (`app/RemoteView.h`), and the modes only see that
   remote lying directly in it. Without a card they are not listed.
 - A card remote opens read-only: OK sends a button. Its Right-key menu (Import, Loop mode, Crazy mode) also says how
   many buttons of the file could not be used.
+- Every protocol Flipper writes is read (`import/FlipperIr.h`). NEC, Samsung32, the three SIRC sizes, RC5 and RC5X
+  become decoded signals. RC6, Kaseikyo, RCA, Pioneer, NEC42 and the NECext commands without an inverse byte have no
+  decoded form here, so the frame Flipper would send is built and kept as a raw signal (`import/FlipperSynth.h`).
 - Importing is done from there, so a remote can be tried before it is imported.
 - *» Import folder*, the first row of every card folder, turns every `.ir` file directly in it into a saved remote, in
   a new category named after the folder or in an existing one. It imports one file per tick, so Left can stop it.
@@ -87,11 +90,37 @@ copies them with a checksum per file. Flash the normal firmware again afterwards
 **Export.** *IR tools > Export all to SD*, and *Export to SD* in the menu of a remote or a category, write Flipper `.ir`
 files to `/iris/export/<category>/<remote>.ir` (`import/FlipperIrWriter.h`, the mirror of the importer).
 
-- Exported: NEC / NECext, Samsung32, SIRC / SIRC15 / SIRC20 and raw signals. Other decoded protocols and empty buttons
-  are counted and left out.
+- Exported: NEC / NECext, Samsung32, SIRC / SIRC15 / SIRC20, RC5 / RC5X and raw signals. A JVC button is written as
+  a raw signal, because Flipper has no JVC protocol. Only empty buttons are left out, and they are counted.
 - Names keep ASCII only; any other character becomes `_`.
 - A file is written under a temporary name and then renamed.
 - To import them again, copy the folder under `/irdb`.
+
+## Remotes from other sources
+
+Flipper-IRDB is the main source. For a remote it does not have, `tools/ir_convert.py` writes Flipper `.ir` files from:
+
+- **LIRC** `.conf` files: `SPACE_ENC`, `RC5`, `RC6`, `SHIFT_ENC` and `RAW_CODES` remotes. Other encodings are reported
+  and not converted.
+- **Pronto hex** text, one code per line as `Name: 0000 006D ...`: learned codes (`0000`, `0100`) and the short RC5
+  (`5000`) and RC6 (`6000`) forms.
+- **Flipper `.ir`** files, such as the ones the device exports. Use this to check your own captures.
+
+```powershell
+python tools/ir_convert.py <file or folder> -o <output folder> --irdb <Flipper-IRDB folder>
+```
+
+- Timings that match a protocol Flipper knows are written as `parsed`, with the same field meaning; the rest as `raw`.
+- With `--irdb`, each signal is looked up in the database. Two captures of one signal never have the same numbers, so
+  raw signals are compared by the shape of their timings. A remote whose signals are all in **one** file of the
+  database is a duplicate: it is reported with that file's name and not written (`--keep-known` writes it anyway).
+- Any other remote is written whole, and the report says how many of its signals the database has and in which file.
+
+Reading the whole database takes about 15 s. [`irdb-extra/`](../../irdb-extra/README.md) in the repository is where
+the remotes that pass this check are kept, in the folder layout of Flipper-IRDB, so both are copied into `/irdb`.
+
+The converter is tested on the PC (`python tools/test_ir_convert.py`) and against Flipper-IRDB itself. The LIRC and
+Pronto readers were checked with hand-written examples, not yet with files from a real remote.
 
 ## Modes
 

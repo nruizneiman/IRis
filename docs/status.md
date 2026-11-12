@@ -12,6 +12,8 @@ What works, and how each part was checked.
 | Library (categories, remotes, buttons), learning, sending | In use | [Interface](firmware/ui.md) |
 | Display, five buttons, menus, on-screen keyboard | In use | SSD1306 panel. Accents and `ñ ¡ ¿` were not checked glyph by glyph. The SH1106 build compiles but was never tried on such a panel |
 | Remotes from the card, import (one remote or a folder), export | In use | Flipper `.ir` files under `/irdb` |
+| RC6, Kaseikyo, RCA, Pioneer and NEC42 signals from the card | Tests on the PC only | Kept as raw frames built from Flipper's encoder sources; none was sent to a real device |
+| Converter of LIRC and Pronto codes (`tools/ir_convert.py`) | Tests on the PC only | Checked against Flipper-IRDB; no file from a real remote was converted yet |
 | Modes: Listen, Be Gone, loop, crazy | In use | |
 | Storage in flash: one file per remote, atomic commit, backup, recovery | In use; power cuts PC-tested | Cuts are simulated at every write on the PC, not provoked on the device. [Persistence](firmware/persistence.md) |
 | Battery power (18650, charger, boost to 5 V) | In use | Not characterised: a nearly empty cell, supply sag while sending |

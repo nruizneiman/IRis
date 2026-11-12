@@ -21,6 +21,11 @@ Measure these on your own unit; do not assume them.
 
 - RAW signals cannot be typed on the device; they come from a capture.
 - No state-based (air-conditioner) protocols; only NEC, Samsung, Sony, RC5, JVC are mapped.
+- A card signal in RC6, Kaseikyo, RCA, Pioneer, NEC42, or NECext without an inverse command byte is kept as a raw frame
+  (41 to 135 entries), which uses the raw budget of the remote: 4000 entries when saved, 12000 when read from the card.
+  The frames were compared with Flipper's encoder sources on the PC, never sent to a real device.
+- The RC6 toggle bit of such a frame is always 0, and an RC5 frame does not alternate its toggle bit either. A device
+  that needs the bit to change may take two presses of the same key as one held key.
 - Learned signals store one frame; held-key repeat patterns are not captured.
 - Cancel granularity is one library call (frame or Sony burst).
 - Exploration cannot know whether the target reacted; it is bounded (<= 1000 codes, >= 250 ms gap,

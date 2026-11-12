@@ -102,7 +102,7 @@ TEST_CASE("import: duplicate button names inside one file are made unique") {
 TEST_CASE("import: a file with nothing convertible, and a file that is not IRDB, import nothing") {
   UiRig r;
   r.card.add("/irdb/Misc/Odd/Odd.ir",
-             "Filetype: IR signals file\nVersion: 1\n#\nname: A\ntype: parsed\nprotocol: RC6\naddress: 00 00 00 00\ncommand: 0C 00 00 00\n");
+             "Filetype: IR signals file\nVersion: 1\n#\nname: A\ntype: parsed\nprotocol: RC7\naddress: 00 00 00 00\ncommand: 0C 00 00 00\n");
   r.card.add("/irdb/Misc/Bad/Bad.ir", "this is not an IRDB file\n");
   r.library.addCategory("TV");
 

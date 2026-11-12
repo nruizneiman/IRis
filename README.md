@@ -19,7 +19,10 @@ IRis learns the buttons of the remotes you already have, sends them back, and ca
 - **Protocols.** NEC, Samsung, Sony (SIRC), RC5 and JVC are decoded and stored as protocol, address and command.
   Anything else is kept and replayed as a raw capture.
 - **Remotes from the microSD card.** Copy Flipper-IRDB `.ir` files to `/irdb` and use them directly from the card, or
-  import one remote or a whole folder into the device. Your own remotes can be exported back as `.ir` files.
+  import one remote or a whole folder into the device. Every protocol those files use is read. Your own remotes can be
+  exported back as `.ir` files.
+- **Remotes from other sources.** `tools/ir_convert.py` turns LIRC files and Pronto hex codes into `.ir` files and
+  leaves out what Flipper-IRDB already has. [`irdb-extra/`](irdb-extra/README.md) is the place for the remotes it lacks.
 - **Listen.** Keeps capturing until you stop it, then lets you replay, inspect or save each capture.
 - **Be Gone.** Sends the power code of every remote in a category or in a card folder, each distinct code once.
 - **Loop and crazy modes.** Repeat a sequence of buttons, or send random ones, with a chosen pause.
@@ -113,7 +116,8 @@ Five keys: **Up / Down** move, **OK** chooses or sends, **Left** goes back (hold
 | Settings | Language, display, capture timeout, storage, diagnostics |
 
 To use Flipper-IRDB, copy its folders into `/irdb` on a FAT32-formatted card, with a card reader or
-[over the USB cable](docs/firmware/ui.md#remotes-from-the-card). Exports are written to `/iris/export`.
+[over the USB cable](docs/firmware/ui.md#remotes-from-the-card). Exports are written to `/iris/export`. Remotes
+from [other sources](docs/firmware/ui.md#remotes-from-other-sources) go into the same `/irdb` folder.
 
 The full screen map, the modes and the limits are in the [interface guide](docs/firmware/ui.md).
 
@@ -150,7 +154,8 @@ IRremoteESP8266 sources.
 | `include/board_pins.h` | The only place with GPIO numbers |
 | `test/` | Unit tests, scripted UI scenarios, the codec cross-check, and frozen data files |
 | `simulator/` | Console simulator over the real services and UI |
-| `tools/` | Test runner and scripts that copy Flipper-IRDB files to the card over serial |
+| `tools/` | Test runner, scripts that copy Flipper-IRDB files to the card over serial, and the converter of LIRC and Pronto codes |
+| `irdb-extra/` | Remotes that Flipper-IRDB does not have, in its layout (empty for now) |
 | `third_party/` | Vendored single-header dependencies of the host build (doctest, ArduinoJson) |
 
 Host toolchain: a C++17 compiler, CMake and Ninja (on Windows: WinLibs MinGW-w64 GCC through winget).

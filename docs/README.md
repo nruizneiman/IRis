@@ -53,4 +53,5 @@ The layout of the code and how to run the tests are in the [project README](../R
 | [`img/`](img) | Pictures used by the documents |
 | [`schematic/`](schematic) | The connection diagram as a KiCad file and as a PDF |
 | [`../case/`](../case) | The 3D model of the case |
+| [`../irdb-extra/`](../irdb-extra/README.md) | Remotes that Flipper-IRDB does not have (empty for now) |
 | [`../wokwi/`](../wokwi) | A simulation project that was prepared and never validated |

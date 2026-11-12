@@ -7,6 +7,7 @@
 #include "domain/Naming.h"
 #include "domain/Protocol.h"
 #include "domain/SignalValidation.h"
+#include "import/FlipperSynth.h"
 
 namespace iris {
 
@@ -82,6 +83,26 @@ std::string clampName(std::string_view raw) {
 
 enum class Outcome { Imported, Unsupported, Invalid };
 
+// A protocol with no decoded form here is kept as the RAW frame Flipper would send.
+Outcome convertAsRaw(const Block& b, uint32_t addr, uint32_t cmd, IrSignal& out, std::string& why) {
+  std::vector<uint16_t> durations;
+  uint32_t carrier = 0;
+  const SynthResult s = synthesizeFlipperFrame(b.protocol, addr, cmd, durations, carrier);
+  if (s == SynthResult::UnknownProtocol) {
+    why = "protocol " + b.protocol + " not known";
+    return Outcome::Unsupported;
+  }
+  if (s == SynthResult::OutOfRange) {
+    why = b.protocol + " value out of range";
+    return Outcome::Invalid;
+  }
+  auto r = buildRawSignal(durations, carrier);
+  if (!r.ok()) { why = r.status().message; return Outcome::Invalid; }
+  out = r.value();
+  out.note = "IRDB";
+  return Outcome::Imported;
+}
+
 Outcome convert(const Block& b, IrSignal& out, std::string& why) {
   if (b.type == "parsed") {
     uint32_t addr = 0, cmd = 0;
@@ -96,7 +117,7 @@ Outcome convert(const Block& b, IrSignal& out, std::string& why) {
     } else if (b.protocol == "NECext") {
       const uint32_t cmdLow = cmd & 0xFF, cmdHigh = (cmd >> 8) & 0xFF;
       if (addr > 0xFFFF || cmd > 0xFFFF) { why = "NECext value out of range"; return Outcome::Invalid; }
-      if (cmdHigh != ((~cmdLow) & 0xFF)) { why = "NECext command is not value+inverse"; return Outcome::Unsupported; }
+      if (cmdHigh != ((~cmdLow) & 0xFF)) return convertAsRaw(b, addr, cmd, out, why);  // no inverse byte: not plain NEC
       r = buildDecodedSignal(Protocol::Nec, addr, cmdLow, 32);
     } else if (b.protocol == "Samsung32") {
       if (addr > 0xFF || cmd > 0xFF) { why = "Samsung32 value out of range"; return Outcome::Invalid; }
@@ -112,9 +133,15 @@ Outcome convert(const Block& b, IrSignal& out, std::string& why) {
       // bits as the upper bits of a 15-bit command.
       if (addr > 0x1FFF || cmd > 0x7F) { why = "SIRC20 value out of range"; return Outcome::Invalid; }
       r = buildDecodedSignal(Protocol::Sony, addr & 0x1F, cmd | ((addr >> 5) << 7), 20);
+    } else if (b.protocol == "RC5") {
+      if (addr > 0x1F || cmd > 0x3F) { why = "RC5 value out of range"; return Outcome::Invalid; }
+      r = buildDecodedSignal(Protocol::Rc5, addr, cmd, 12);
+    } else if (b.protocol == "RC5X") {
+      // Flipper keeps the low 6 command bits; in RC5X the seventh one is always set (it travels as the field bit).
+      if (addr > 0x1F || cmd > 0x7F) { why = "RC5X value out of range"; return Outcome::Invalid; }
+      r = buildDecodedSignal(Protocol::Rc5, addr, (cmd & 0x3F) | 0x40, 13);
     } else {
-      why = "protocol " + b.protocol + " not converted";
-      return Outcome::Unsupported;
+      return convertAsRaw(b, addr, cmd, out, why);
     }
     if (!r.ok()) { why = r.status().message; return Outcome::Invalid; }
     out = r.value();

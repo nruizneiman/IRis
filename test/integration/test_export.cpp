@@ -24,6 +24,7 @@ TEST_CASE("export: what is written reads back as the same signals") {
   const std::vector<Back> cases = {
       {Protocol::Nec, 0x04, 0x08, 32},   {Protocol::Nec, 0x1234, 0x56, 32}, {Protocol::Samsung, 0x07, 0x02, 32},
       {Protocol::Sony, 0x01, 0x15, 12},  {Protocol::Sony, 0x10, 0x2A, 15},  {Protocol::Sony, 0x01, 0x1234, 20},
+      {Protocol::Rc5, 0x01, 0x02, 12},   {Protocol::Rc5, 0x05, 0x45, 13},
   };
   std::vector<ViewButton> buttons;
   for (size_t i = 0; i < cases.size(); ++i) {
@@ -54,14 +55,29 @@ TEST_CASE("export: what is written reads back as the same signals") {
   CHECK(rf.carrierHz == 36000);
 }
 
-TEST_CASE("export: protocols the format cannot carry are counted, not written") {
+TEST_CASE("export: a protocol Flipper does not have is written as RAW, nothing is left out") {
   std::vector<ViewButton> buttons;
   buttons.push_back({"Sony raro", built(Protocol::Sony, 0x01, 0x7FFF, 20)});  // fits SIRC20
-  auto rc5 = buildDecodedSignal(Protocol::Rc5, 1, 2, 12);
-  if (rc5.ok()) buttons.push_back({"RC5", rc5.value()});
+  buttons.push_back({"JVC", built(Protocol::Jvc, 0x03, 0x17, 16)});
+  buttons.push_back({"RC5 de 13", built(Protocol::Rc5, 0x05, 0x12, 13)});  // seventh command bit clear: a plain RC5 frame
   const WrittenIr w = writeFlipperIr(buttons);
-  CHECK(w.written >= 1);
+  CHECK(w.written == 3);
+  CHECK(w.skipped == 0);
   CHECK(w.text.find("Filetype: IR signals file") == 0);
+  auto back = parseFlipperIr(w.text);
+  REQUIRE(back.ok());
+  REQUIRE(back.value().buttons.size() == 3);
+  const RawFrame& jvc = back.value().buttons[1].signal.initial.at(0).raw;
+  REQUIRE(jvc.durationsUs.size() == 2 + 16 * 2 + 1);
+  CHECK(jvc.durationsUs[0] == 8400);
+  CHECK(jvc.durationsUs[1] == 4200);
+  uint32_t word = 0;  // address then command, each LSB first
+  for (int i = 0; i < 16; ++i) word |= (jvc.durationsUs[3 + 2 * i] > 1000 ? 1u : 0u) << i;
+  CHECK(word == (0x03u | (0x17u << 8)));
+  const DecodedFrame& rc5 = back.value().buttons[2].signal.initial.at(0).decoded;
+  CHECK(rc5.protocol == Protocol::Rc5);
+  CHECK(rc5.bits == 12);
+  CHECK(rc5.command == 0x12);
 }
 
 TEST_CASE("export: file names keep ASCII and replace the rest") {
