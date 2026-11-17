@@ -23,6 +23,7 @@ IrSignal rawReplay(const IrSignal& captured);
 using PickFn = std::function<Nav(UiContext&, Id remote, Id button, int extraPops)>;
 std::unique_ptr<Screen> makeRemotePicker(const std::string& title, PickFn onPick);  // saved controls only
 std::unique_ptr<Screen> makeCaptureDetail(const CaptureRecord& rec);
+std::unique_ptr<Screen> makeRemoteScreen(Id remote);  // the buttons of a saved control; OK sends
 
 // Creates a saved control from a view (a card control, usually) in `category`, with unique names, without any screen
 // change and without saving to flash: the caller saves when it is done.

@@ -41,7 +41,8 @@ Home (six icons on one page; the title bar shows the battery, and "*" when there
 │     A card folder: » Import folder, subfolders, remotes. A card remote opens read-only (OK sends);
 │     Right on it: Import, Loop mode, Crazy mode.
 ├─ Learn signal ─ pick a remote ─ pick or create a button ─ wait ─ review ─ Save / Test send / Retry
-├─ Listen ─ keeps capturing until OK; each capture: Play, Save to button, Details, Delete
+├─ Listen ─ keeps capturing until OK; each capture: Play, Find remotes, Save to button, Details, Delete
+│     Below the captures: Listen again, Find in remotes (all captures), Save all (into a remote)
 ├─ Be Gone ─ Power off / Power on, pause ─ a category or a card folder ─ confirm ─ run
 ├─ IR tools
 │     Latest captures (8, kept in RAM only; OK replays the capture after asking)
@@ -138,6 +139,17 @@ the user chooses to start. Left stops, leaving the screen stops, and the pause b
 - **Listen.** Keeps the receiver armed, restarting it after every capture, until OK stops it (up to 40 captures or
   16000 raw entries). Then each capture can be replayed, saved into a button of a saved remote, inspected or deleted.
   A burst that arrives in the instant between one capture and the next arming can be missed.
+  - **Find remotes** (one capture) and **Find in remotes** (all of them) look for the heard codes in the saved remotes
+    first, then in every `.ir` file under `/irdb` (subfolders included), a few files per tick. Hits appear as they are
+    found; OK stops the reading, and a hit can be opened while it runs. With several captures a hit shows how many of
+    the different codes it holds (`2/3`) and the best ones come first when the search ends. A hit lists only the
+    buttons that matched (OK sends one) and offers *Open remote* and, for a card remote, *Import remote*.
+  - Only decoded signals are compared: protocol, address, command and size, ignoring the RC5 toggle bit. A **RAW
+    capture is not searched**, and a card button that could only be kept as a raw frame (RC6, Kaseikyo, ...) cannot match
+    a decoded capture. Without a card only the saved remotes are searched; up to 16 different codes and 60 hits.
+  - **Save all** puts the captures into a new remote (name, then category) or adds them as new buttons (`Tecla 1`, `Tecla
+    2`, `Key 1` in English) to a saved remote. A code heard twice is kept once; RAW captures are kept as they are.
+    Rename the buttons afterwards from the remote's menu.
 
 ## Limits
 

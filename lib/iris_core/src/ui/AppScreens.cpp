@@ -1101,6 +1101,7 @@ void sendSignal(UiContext& c, const IrSignal& s) { ::iris::sendSignal(c, s); }
 IrSignal rawReplay(const IrSignal& captured) { return ::iris::rawReplay(captured); }
 std::unique_ptr<Screen> makeRemotePicker(const std::string& title, PickFn onPick) { return ::iris::makeRemotePicker(title, std::move(onPick)); }
 std::unique_ptr<Screen> makeCaptureDetail(const CaptureRecord& rec) { return ::iris::makeCaptureDetail(rec); }
+std::unique_ptr<Screen> makeRemoteScreen(Id remote) { return ::iris::makeRemoteScreen(remote); }
 Result<Id> importViewQuiet(UiContext& c, const RemoteView& view, Id category) { return ::iris::importViewQuiet(c, view, category); }
 std::unique_ptr<Screen> makeImportViewCategoryPicker(std::shared_ptr<RemoteView> view) { return ::iris::makeImportViewPicker(std::move(view)); }
 

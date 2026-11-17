@@ -5,6 +5,7 @@
 
 #include "app/RemoteView.h"
 #include "app/Sequences.h"
+#include "app/SignalMatch.h"
 #include "domain/Limits.h"
 #include "domain/Protocol.h"
 #include "ui/ScreenKit.h"
@@ -501,6 +502,233 @@ void replayCapture(UiContext& c, const IrSignal& s) {
   sendSignal(c, exact ? s : rawReplay(s));
 }
 
+// ---- finding the controls that hold what was heard
+
+// What one matching control offers: send a matching button, open the control, import it when it lives on the card.
+P makeHitMenu(MatchHit hit) {
+  auto list = std::make_unique<ListScreen>("match-hit", hit.remote, [hit](UiContext&) {
+    std::vector<ListItem> it;
+    const RemoteRef ref{hit.savedId, hit.path};
+    for (const MatchedButton& mb : hit.buttons) {
+      const size_t pos = mb.position;
+      it.push_back({mb.name, "", [ref, pos](UiContext& c) {
+                      auto view = openRef(c, ref);
+                      if (!view.ok()) {
+                        c.toast(ref.fromCard() ? cardErrorText(view.status()) : spanishError(view.status()));
+                        return Nav::none();
+                      }
+                      if (pos >= view.value().buttons.size() || !view.value().buttons[pos].signal) {
+                        c.toast("Sin señal guardada");
+                        return Nav::none();
+                      }
+                      sendSignal(c, *view.value().buttons[pos].signal);
+                      return Nav::none();
+                    }});
+    }
+    it.push_back({"Abrir control", "", [ref](UiContext&) {
+                    return Nav::push(ref.fromCard() ? makeCardRemoteScreen(ref.path) : makeRemoteScreen(ref.savedId));
+                  }});
+    if (ref.fromCard()) {
+      it.push_back({"Importar control", "", [ref](UiContext& c) {
+                      auto view = openRef(c, ref);
+                      if (!view.ok()) {
+                        c.toast(cardErrorText(view.status()));
+                        return Nav::none();
+                      }
+                      return Nav::push(makeImportViewCategoryPicker(std::make_shared<RemoteView>(std::move(view.value()))));
+                    }});
+    }
+    return it;
+  });
+  list->footer("OK:enviar Izq:atrás");
+  return list;
+}
+
+// Searches the saved controls and the card for the heard codes. The card is read a few files per tick and the hits appear
+// as they are found; OK stops the reading, and a hit opens its menu (the search continues when the menu is closed).
+class MatchScreen : public Screen {
+ public:
+  explicit MatchScreen(std::vector<IrSignal> heard) : heard_(std::move(heard)) {}
+
+  const char* id() const override { return "match"; }
+
+  void onEnter(UiContext& c) override {
+    matcher_ = std::make_unique<RemoteMatcher>(c.library, c.files, heard_);
+    scanning_ = !matcher_->done();
+    if (!scanning_) matcher_->sortByScore();
+  }
+
+  void onTick(UiContext& c) override {
+    if (!scanning_) return;
+    const uint32_t start = c.clock.nowMs();
+    do {
+      if (!matcher_->step()) {
+        scanning_ = false;
+        matcher_->sortByScore();
+        sel_ = top_ = 0;
+        return;
+      }
+    } while (c.clock.nowMs() - start < kTickBudgetMs);
+  }
+
+  Nav onKey(UiContext&, const KeyEvent& e) override {
+    if (e.key == Key::Left && e.action == KeyAction::LongPress) return Nav::home();
+    const auto& hits = matcher_->hits();
+    if ((e.key == Key::Up || e.key == Key::Down) && e.action != KeyAction::LongPress) {
+      if (!hits.empty()) sel_ = e.key == Key::Down ? (sel_ + 1) % hits.size() : (sel_ + hits.size() - 1) % hits.size();
+      return Nav::none();
+    }
+    if (e.action != KeyAction::Press) return Nav::none();
+    if (e.key == Key::Left) return Nav::pop();
+    if (e.key == Key::Ok && scanning_) {
+      matcher_->stop();
+      scanning_ = false;
+      matcher_->sortByScore();
+      sel_ = top_ = 0;
+      return Nav::none();
+    }
+    if ((e.key == Key::Ok || e.key == Key::Right) && sel_ < hits.size()) return Nav::push(makeHitMenu(hits[sel_]));
+    return Nav::none();
+  }
+
+  void render(UiContext&, Painter& p) override {
+    const auto& hits = matcher_->hits();
+    if (scanning_) p.title("Buscando " + numStr(matcher_->filesRead()));
+    else p.title("Coincidencias: " + numStr(hits.size()) + (matcher_->full() ? "+" : ""));
+    if (hits.empty()) {
+      if (matcher_->heard().empty()) {
+        p.text(0, 2, "Sin código que buscar");
+        p.text(0, 3, "(RAW no se compara)");
+      } else {
+        p.text(0, 2, scanning_ ? "Sin coincidencias aún" : "Sin coincidencias");
+      }
+    }
+    if (sel_ >= hits.size() && !hits.empty()) sel_ = hits.size() - 1;
+    if (sel_ < top_) top_ = sel_;
+    if (sel_ >= top_ + Painter::kContentRows) top_ = sel_ + 1 - Painter::kContentRows;
+    const bool several = matcher_->heard().size() > 1;
+    for (size_t r = 0; r < static_cast<size_t>(Painter::kContentRows) && top_ + r < hits.size(); ++r) {
+      const MatchHit& h = hits[top_ + r];
+      std::string value = several ? numStr(h.heardMatched) + "/" + numStr(matcher_->heard().size()) : std::string();
+      if (h.fromCard) value += value.empty() ? "SD" : " SD";
+      p.item(Painter::kFirstContentRow + static_cast<int>(r), h.remote, value, top_ + r == sel_);
+    }
+    p.scrollbar(hits.size(), top_, Painter::kContentRows);
+    p.footer(scanning_ ? "OK:parar Izq:salir" : "OK:ver Izq:atrás");
+  }
+
+ private:
+  static constexpr uint32_t kTickBudgetMs = 25;  // card files read per tick while the clock allows
+  std::vector<IrSignal> heard_;
+  std::unique_ptr<RemoteMatcher> matcher_;
+  bool scanning_ = false;
+  size_t sel_ = 0, top_ = 0;
+};
+
+P makeMatchScreen(std::vector<IrSignal> heard) { return std::make_unique<MatchScreen>(std::move(heard)); }
+
+// ---- keeping several captures in one control
+
+// The captures worth keeping as buttons: a code heard twice is kept once.
+std::vector<IrSignal> distinctSignals(const ListenData& data) {
+  std::vector<IrSignal> out;
+  for (const CaptureRecord& rec : data.items) {
+    const bool repeated = std::any_of(out.begin(), out.end(), [&](const IrSignal& s) { return sameCode(s, rec.signal); });
+    if (!repeated) out.push_back(rec.signal);
+  }
+  return out;
+}
+
+std::string keyName(const UiContext& c, size_t n) { return std::string(c.settings.language == Lang::Es ? "Tecla " : "Key ") + numStr(n); }
+
+// Adds the captures to a saved control as new buttons ("Tecla 1"...). Stops at the first failure and says how many fit.
+Nav addToRemote(UiContext& c, Id remote, const std::vector<IrSignal>& signals, int pops) {
+  size_t added = 0, n = 1;
+  Status failure;
+  for (const IrSignal& s : signals) {
+    Id button = 0;
+    for (; n < 10000; ++n) {
+      auto r = c.library.addButton(remote, keyName(c, n));
+      if (r.ok()) {
+        button = r.value();
+        ++n;
+        break;
+      }
+      if (r.status().code != Err::AlreadyExists) {
+        failure = r.status();
+        break;
+      }
+    }
+    if (button == 0) {
+      if (failure.ok()) failure = Status::fail(Err::LimitReached, "no free button name");
+      break;
+    }
+    const Status st = c.library.setButtonSignal(remote, button, s);
+    if (!st.ok()) {
+      c.library.removeButton(remote, button);
+      failure = st;
+      break;
+    }
+    ++added;
+  }
+  if (added == 0) {
+    c.toast(spanishError(failure));
+    return Nav::none();
+  }
+  finishChange(c, Status::success(), failure.ok() ? "Botones: " + numStr(added) : "Caben: " + numStr(added));
+  return Nav::pop(pops);
+}
+
+// A new control with the captures as buttons, in the category chosen on this screen (or a new one).
+P makeCategoryForNewRemote(std::string name, std::shared_ptr<std::vector<IrSignal>> signals, int pops) {
+  return std::make_unique<ListScreen>("save-all-category", "Categoría", [name, signals, pops](UiContext& c) {
+    std::vector<ListItem> it;
+    auto create = [name, signals, pops](UiContext& c2, Id category, bool removeCategoryOnFailure) {
+      std::vector<std::pair<std::string, IrSignal>> buttons;
+      for (const IrSignal& s : *signals) buttons.emplace_back(keyName(c2, buttons.size() + 1), s);
+      auto r = c2.library.importRemote(name, category, buttons);
+      if (!r.ok() && removeCategoryOnFailure) c2.library.removeCategory(category);
+      if (!finishChange(c2, r.ok() ? Status::success() : r.status(), "Control creado")) return Nav::none();
+      return Nav::pop(pops);
+    };
+    for (const Category& cat : c.library.data().categories) {
+      const Id cid = cat.id;
+      it.push_back({cat.name, "", [create, cid](UiContext& c2) { return create(c2, cid, false); }});
+    }
+    it.push_back({"+ Nueva categoría", "", [create, pops](UiContext&) {
+                    return Nav::push(std::make_unique<TextInputScreen>(
+                        "Nueva categoría", "", limits::kMaxNameBytes, [create, pops](UiContext& c3, const std::string& catName) {
+                          auto cat = c3.library.addCategory(catName);
+                          if (!cat.ok()) {
+                            c3.toast(spanishError(cat.status()));
+                            return Nav::none();
+                          }
+                          return create(c3, cat.value(), true).kind == Nav::Kind::Pop ? Nav::pop(pops + 1) : Nav::none();
+                        }));
+                  }});
+    return it;
+  });
+}
+
+// Where to keep every capture heard: a new control, or new buttons in a saved one. Pops back to the listening list.
+P makeSaveAllTarget(std::shared_ptr<ListenData> data) {
+  return std::make_unique<ListScreen>("save-all", "Guardar en...", [data](UiContext& c) {
+    std::vector<ListItem> it;
+    it.push_back({"+ Nuevo control", "", [data](UiContext&) {
+                    auto signals = std::make_shared<std::vector<IrSignal>>(distinctSignals(*data));
+                    return Nav::push(std::make_unique<TextInputScreen>(
+                        "Nuevo control", "", limits::kMaxNameBytes, [signals](UiContext&, const std::string& name) {
+                          return Nav::push(makeCategoryForNewRemote(name, signals, 3));  // category, name, this menu
+                        }));
+                  }});
+    for (const Remote& r : c.library.data().remotes) {
+      const Id rid = r.id;
+      it.push_back({r.name, "", [data, rid](UiContext& c2) { return addToRemote(c2, rid, distinctSignals(*data), 1); }});
+    }
+    return it;
+  });
+}
+
 P makeCaptureActions(std::shared_ptr<ListenData> data, size_t index) {
   auto list = std::make_unique<ListScreen>("listen-capture", "Captura", [data, index](UiContext&) {
     std::vector<ListItem> it;
@@ -508,6 +736,14 @@ P makeCaptureActions(std::shared_ptr<ListenData> data, size_t index) {
     it.push_back({"Reproducir", "", [data, index](UiContext& c) {
                     if (index < data->items.size()) replayCapture(c, data->items[index].signal);
                     return Nav::none();
+                  }});
+    it.push_back({"Buscar controles", "", [data, index](UiContext& c) {
+                    if (index >= data->items.size()) return Nav::none();
+                    if (!isMatchable(data->items[index].signal)) {
+                      c.toast("RAW: sin código");
+                      return Nav::none();
+                    }
+                    return Nav::push(makeMatchScreen({data->items[index].signal}));
                   }});
     it.push_back({"Guardar en botón", "", [data, index](UiContext&) {
                     return Nav::push(makeRemotePicker("Guardar en: control", [data, index](UiContext& c2, Id remote, Id button, int extra) {
@@ -584,7 +820,7 @@ class ListenScreen : public Screen {
       if (e.key == Key::Left && e.action == KeyAction::Press) return Nav::pop();
       return Nav::none();
     }
-    const size_t rows = data_->items.size() + 1;  // the captures and "Escuchar de nuevo"
+    const size_t rows = rowCount();
     if ((e.key == Key::Up || e.key == Key::Down) && e.action != KeyAction::LongPress) {
       sel_ = e.key == Key::Down ? (sel_ + 1) % rows : (sel_ + rows - 1) % rows;
       return Nav::none();
@@ -592,11 +828,24 @@ class ListenScreen : public Screen {
     if (e.action != KeyAction::Press) return Nav::none();
     if (e.key == Key::Left) return Nav::pop();
     if (e.key == Key::Ok || e.key == Key::Right) {
-      if (sel_ == data_->items.size()) {
+      const size_t n = data_->items.size();
+      if (sel_ < n) return Nav::push(makeCaptureActions(data_, sel_));
+      if (sel_ == n) {
         if (e.key == Key::Ok) listen(c);
         return Nav::none();
       }
-      return Nav::push(makeCaptureActions(data_, sel_));
+      if (e.key != Key::Ok) return Nav::none();
+      if (sel_ == n + 1) {  // every capture at once
+        std::vector<IrSignal> all;
+        for (const CaptureRecord& rec : data_->items) all.push_back(rec.signal);
+        const bool any = std::any_of(all.begin(), all.end(), [](const IrSignal& s) { return isMatchable(s); });
+        if (!any) {
+          c.toast("RAW: sin código");
+          return Nav::none();
+        }
+        return Nav::push(makeMatchScreen(std::move(all)));
+      }
+      return Nav::push(makeSaveAllTarget(data_));
     }
     return Nav::none();
   }
@@ -614,14 +863,17 @@ class ListenScreen : public Screen {
       return;
     }
     p.title("Capturas: " + numStr(data_->items.size()));
-    const size_t rows = data_->items.size() + 1;
+    const size_t rows = rowCount();
     clampSelection();
     if (sel_ < top_) top_ = sel_;
     if (sel_ >= top_ + Painter::kContentRows) top_ = sel_ + 1 - Painter::kContentRows;
+    const size_t n = data_->items.size();
     for (size_t r = 0; r < static_cast<size_t>(Painter::kContentRows) && top_ + r < rows; ++r) {
       const size_t i = top_ + r;
-      const std::string label = i < data_->items.size() ? "#" + numStr(i + 1) + " " + captureSummary(data_->items[i].signal)
-                                                        : std::string("Escuchar de nuevo");
+      const std::string label = i < n        ? "#" + numStr(i + 1) + " " + captureSummary(data_->items[i].signal)
+                                : i == n     ? std::string("Escuchar de nuevo")
+                                : i == n + 1 ? std::string("Buscar en controles")
+                                             : std::string("Guardar todas");
       p.item(Painter::kFirstContentRow + static_cast<int>(r), label, "", i == sel_);
     }
     p.scrollbar(rows, top_, Painter::kContentRows);
@@ -646,8 +898,10 @@ class ListenScreen : public Screen {
     c.learn.cancel();
     sel_ = 0;
   }
+  // The captures, "Escuchar de nuevo", and (once something was heard) the two actions on all of them.
+  size_t rowCount() const { return data_->items.size() + (data_->items.empty() ? 1 : 3); }
   void clampSelection() {
-    const size_t rows = data_->items.size() + 1;
+    const size_t rows = rowCount();
     if (sel_ >= rows) sel_ = rows - 1;
   }
 

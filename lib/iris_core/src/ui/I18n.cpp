@@ -119,6 +119,13 @@ constexpr CatalogEntry kCatalog[] = {
     {"Memoria llena", "Memory full"}, {"Detalle", "Details"}, {"Eliminar", "Delete"}, {"Sin lugar", "No room"},
     {"Importar carpeta", "Import folder"}, {"Exportar a SD", "Export to SD"}, {"Exportar todo a SD", "Export all to SD"},
     {"Sin nada que exportar", "Nothing to export"}, {"No se pudo escribir", "Could not write"},
+    // finding the controls that hold what was heard
+    {"Buscar controles", "Find remotes"}, {"Buscar en controles", "Find in remotes"},
+    {"Guardar todas", "Save all"}, {"Abrir control", "Open remote"},
+    {"Importar control", "Import remote"}, {"Sin coincidencias", "No matches"}, {"Sin coincidencias aún", "No matches yet"},
+    {"Sin código que buscar", "No code to look up"}, {"(RAW no se compara)", "(RAW is not compared)"},
+    {"RAW: sin código", "RAW: no code"}, {"OK:parar Izq:salir", "OK:stop Left:exit"},
+    {"OK:ver Izq:atrás", "OK:view Left:back"}, {"OK:enviar Izq:atrás", "OK:send Left:back"},
     // errors shown as messages
     {"Dato inválido", "Invalid data"}, {"Valor fuera de rango", "Value out of range"},
     {"Límite alcanzado", "Limit reached"}, {"No encontrado", "Not found"}, {"Ya existe ese nombre", "Name already exists"},
@@ -143,7 +150,7 @@ constexpr CatalogEntry kPrefixes[] = {
     {"Vista previa: ", "Preview: "},  {"Archivos: ", "Files: "},    {"Importados: ", "Imported: "},
     {"Omitidos: ", "Skipped: "},     {"Capturas: ", "Captures: "}, {"Loco: ", "Crazy: "},
     {"Exportados: ", "Exported: "}, {"Apagar: ", "Power off: "},     {"Encender: ", "Power on: "},
-    {"Perdido: ", "Lost: "},
+    {"Perdido: ", "Lost: "},     {"Buscando ", "Searching "}, {"Coincidencias: ", "Matches: "}, {"Caben: ", "Fit: "},
 };
 
 // Text that ends a string ("3 botones"): the head is looked up as a whole string.
