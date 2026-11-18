@@ -190,6 +190,10 @@ Rules of the code base:
 More detail: [interface](docs/firmware/ui.md) (the rules the screens follow), [persistence](docs/firmware/persistence.md)
 (storage format and recovery), [IR layer](docs/firmware/ir.md) (sending, receiving and the emitter limits).
 
+## Press and mentions
+
+- Hackster.io: [Give Your Old Remotes the Boot with IRis](https://www.hackster.io/news/give-your-old-remotes-the-boot-with-iris-846fc253a8e5)
+
 ## Licence and credits
 
 IRis is free software under the [GNU General Public License v3.0](LICENSE).
