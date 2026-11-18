@@ -4,6 +4,7 @@
   <a href="https://github.com/nruizneiman/iris"><img src="https://img.shields.io/static/v1?label=nruizneiman&message=iris&color=00bcd4&logo=github" alt="nruizneiman/iris"/></a>
   <a href="https://github.com/nruizneiman/iris"><img src="https://img.shields.io/github/stars/nruizneiman/iris?style=social" alt="Stars"/></a>
   <a href="https://github.com/nruizneiman/iris"><img src="https://img.shields.io/github/forks/nruizneiman/iris?style=social" alt="Forks"/></a>
+  <img src="https://img.shields.io/github/downloads/nruizneiman/iris/total?color=00bcd4&label=downloads&logo=github" alt="Downloads"/>
   <img src="https://img.shields.io/badge/ESP32-IR%20remote-00bcd4" alt="ESP32 IR remote"/>
   <img src="https://img.shields.io/badge/license-GPL--3.0-00bcd4" alt="GPL-3.0 license"/>
 </p>
